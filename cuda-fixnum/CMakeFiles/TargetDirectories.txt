@@ -1,3 +1,0 @@
-/home/yiya/yue/challenge/snark-challenge-prover-reference/cuda-fixnum/CMakeFiles/edit_cache.dir
-/home/yiya/yue/challenge/snark-challenge-prover-reference/cuda-fixnum/CMakeFiles/rebuild_cache.dir
-/home/yiya/yue/challenge/snark-challenge-prover-reference/cuda-fixnum/CMakeFiles/cuda-fixnum.dir
