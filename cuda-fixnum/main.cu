@@ -128,9 +128,6 @@ void write_mnt_fq(uint8_t* fq, FILE* outputs) {
 }
 
 int cudaDo(int argc, const char* argv[]) {
-  printf("hahahah call cudaDo() from reference.---------------\n");
-  return 0;
-
   setbuf(stdout, NULL);
 
   // mnt4_q

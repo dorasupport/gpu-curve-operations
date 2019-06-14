@@ -13,7 +13,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/src")
 
 # nvcc flags
 set(CUDA_NVCC_FLAGS
-  -O3 -G -g -std=c++11
+  -G -g -std=c++11
   -gencode arch=compute_60,code=sm_60
   )
 
