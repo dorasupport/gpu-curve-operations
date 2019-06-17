@@ -236,8 +236,10 @@ int run_prover(
 
 int main(int argc, const char * argv[])
 {
+#if 0
   cudaDo(argc, argv);
   return 0;
+#endif
   
   setbuf(stdout, NULL);
   std::string curve(argv[1]);
