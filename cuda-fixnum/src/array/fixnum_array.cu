@@ -245,8 +245,10 @@ dispatch(int nelts, Args... args) {
     // Get the slot index for the current thread.
     int blk_tid_offset = blockDim.x * blockIdx.x;
     int tid_in_blk = threadIdx.x;
-    int idx = (blk_tid_offset + tid_in_blk) / fixnum::SLOT_WIDTH;
+    int idx = (blk_tid_offset + tid_in_blk) / WARPSIZE; //fixnum::SLOT_WIDTH;
 
+    //printf("width %d slot width %d WARPSIZE %d\n", fixnum::layout::WIDTH, fixnum::SLOT_WIDTH, WARPSIZE);
+    //printf("blk_tid_offset %d tid_in_blk %d idx %d nelts %d\n", blk_tid_offset, tid_in_blk, idx, nelts);
     if (idx < nelts) {
         // TODO: Find a way to load each argument into a register before passing
         // it to fn, and then unpack the return values where they belong. This
@@ -259,7 +261,10 @@ dispatch(int nelts, Args... args) {
         int off = idx * fixnum::layout::WIDTH + fixnum::layout::laneIdx();
         // TODO: This is hiding a sin against memory aliasing / management /
         // type-safety.
-        fn(args[off]...);
+        if (fixnum::layout::laneIdx() < fixnum::SLOT_WIDTH) {
+            //printf("off %d blk_tid_offset %d tid_in_blk %d idx %d nelts %d laneIdx %d\n", off, blk_tid_offset, tid_in_blk, idx, nelts, fixnum::layout::laneIdx());
+            fn(args[off]...);
+        }
     }
 }
 
@@ -268,7 +273,7 @@ template< template <typename> class Func, typename... Args >
 void
 fixnum_array<fixnum>::map(Args... args) {
     // TODO: Set this to the number of threads on a single SM on the host GPU.
-    constexpr int BLOCK_SIZE = 192;
+    constexpr int BLOCK_SIZE = 1024;
 
     // FIXME: WARPSIZE should come from slot_layout
     constexpr int WARPSIZE = 32;
@@ -278,10 +283,11 @@ fixnum_array<fixnum>::map(Args... args) {
 
     int nelts = std::min( { args->length()... } );
 
-    constexpr int fixnums_per_block = BLOCK_SIZE / fixnum::SLOT_WIDTH;
+    constexpr int fixnums_per_block = BLOCK_SIZE / WARPSIZE;//fixnum::SLOT_WIDTH;
 
     // FIXME: nblocks could be too big for a single kernel call to handle
     int nblocks = ceilquo(nelts, fixnums_per_block);
+    //printf("nelts %d fixnums_per_block %d nblocks %d SLOT_WIDTH %d\n", nelts, fixnums_per_block, nblocks,fixnum::SLOT_WIDTH);
 
     // nblocks > 0 iff nelts > 0
     if (nblocks > 0) {
