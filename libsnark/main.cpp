@@ -24,7 +24,8 @@ using namespace libff;
 using namespace libsnark;
 
 //const multi_exp_method method = multi_exp_method_BDLO12;
-const multi_exp_method method = multi_exp_method_bos_coster;
+//const multi_exp_method method = multi_exp_method_bos_coster;
+const multi_exp_method method = multi_exp_method_naive_plain;
 
 template<typename ppT>
 class groth16_parameters {
@@ -192,10 +193,11 @@ int run_prover(
     // End reading of parameters and input
 
     libff::enter_block("Call to r1cs_gg_ppzksnark_prover");
-
+#if 0
     std::vector<Fr<ppT>> coefficients_for_H = compute_H<ppT>(
         parameters.d,
         ca, cb, cc);
+#endif
 
     libff::enter_block("Compute the proof");
     libff::enter_block("Multi-exponentiations");
@@ -203,7 +205,7 @@ int run_prover(
     // Now the 5 multi-exponentiations
     G1<ppT> evaluation_At = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
-
+#if 0
     G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
 
@@ -230,6 +232,7 @@ int run_prover(
       std::move(C));
 
     output.write(output_path);
+#endif
 
     return 0;
 }

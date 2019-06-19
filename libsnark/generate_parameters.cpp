@@ -124,6 +124,6 @@ int generate_paramaters(
 
 int main(int argc, const char * argv[])
 {
-  generate_paramaters<mnt4753_pp>(20, "MNT4753-parameters", "MNT4753-input");
-  generate_paramaters<mnt6753_pp>(15, "MNT6753-parameters", "MNT6753-input");
+  generate_paramaters<mnt4753_pp>(2, "MNT4753-parameters", "MNT4753-input");
+  //generate_paramaters<mnt6753_pp>(15, "MNT6753-parameters", "MNT6753-input");
 }

@@ -25,6 +25,8 @@
 #include <libff/common/profiling.hpp>
 #include <libff/common/utils.hpp>
 
+#include "cuda-fixnum/main.cuh"
+
 namespace libff {
 
 template<mp_size_t n>
@@ -152,7 +154,6 @@ T multi_exp_inner(
 
     typename std::vector<T>::const_iterator vec_it;
     typename std::vector<FieldT>::const_iterator scalar_it;
-
     for (vec_it = vec_start, scalar_it = scalar_start; vec_it != vec_end; ++vec_it, ++scalar_it)
     {
         result = result + (*scalar_it) * (*vec_it);
@@ -447,6 +448,47 @@ T multi_exp_with_mixed_addition(typename std::vector<T>::const_iterator vec_star
                                 typename std::vector<FieldT>::const_iterator scalar_end,
                                 const size_t chunks)
 {
+#if 1
+    T acc = T::zero();
+    typename std::vector<T>::const_iterator vec_it;
+    typename std::vector<FieldT>::const_iterator scalar_it;
+    std::vector<uint8_t *> vec_x;
+    std::vector<uint8_t *> vec_y;
+    std::vector<uint8_t *> vec_z;
+    std::vector<uint8_t *> scalar_val;
+    int esize = 96;
+    uint8_t x3[esize];
+    uint8_t y3[esize];
+    uint8_t z3[esize];
+    uint8_t *val;
+    int i = 0;
+    for (vec_it = vec_start, scalar_it = scalar_start; vec_it != vec_end; ++vec_it, ++scalar_it)
+    {   
+        val = new uint8_t[esize];
+        memset(val, 0x0, esize);
+        ((*vec_it).X()).mont_repr.as_bytes(val);
+        vec_x.emplace_back(val);
+        for (int k = 0; k < esize; k++) {
+            printf("%x", val[k]);
+        }
+        val = new uint8_t[esize];
+        memset(val, 0x0, esize);
+        ((*vec_it).Y()).mont_repr.as_bytes(val);
+        vec_y.emplace_back(val);
+        val = new uint8_t[esize];
+        memset(val, 0x0, esize);
+        ((*vec_it).Z()).mont_repr.as_bytes(val);
+        vec_z.emplace_back(val);
+        val = new uint8_t[esize];
+        memset(val, 0x0, esize);
+        (*scalar_it).as_bigint().as_bytes(val);
+        scalar_val.emplace_back(val);
+        i ++;
+    }
+    int size = vec_end - vec_start;
+    do_calc_np_sigma(size, scalar_val, vec_x, vec_y, vec_z, x3, y3, z3);
+    return acc;
+#else
     assert(std::distance(vec_start, vec_end) == std::distance(scalar_start, scalar_end));
     enter_block("Process scalar vector");
     auto value_it = vec_start;
@@ -493,6 +535,7 @@ T multi_exp_with_mixed_addition(typename std::vector<T>::const_iterator vec_star
     leave_block("Process scalar vector");
 
     return acc + multi_exp<T, FieldT, Method>(g.begin(), g.end(), p.begin(), p.end(), chunks);
+#endif
 }
 
 template <typename T>
