@@ -468,9 +468,6 @@ T multi_exp_with_mixed_addition(typename std::vector<T>::const_iterator vec_star
         memset(val, 0x0, esize);
         ((*vec_it).X()).mont_repr.as_bytes(val);
         vec_x.emplace_back(val);
-        for (int k = 0; k < esize; k++) {
-            printf("%x", val[k]);
-        }
         val = new uint8_t[esize];
         memset(val, 0x0, esize);
         ((*vec_it).Y()).mont_repr.as_bytes(val);

@@ -151,17 +151,7 @@ struct pq_plus {
             z3 = z1;
             return;
         }
-        dump(x1, 24);
-        dump(y1, 24);
-        dump(z1, 24);
-        dump(x2, 24);
-        dump(y2, 24);
-        dump(z2, 24);
         pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
-        printf("result is\n");
-        dump(x3, 24);
-        dump(y3, 24);
-        dump(z3, 24);
   }
 };
 
@@ -686,10 +676,6 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
             memcpy(y1bytes + j*fn_bytes, y1[i+j], fn_bytes);
             memcpy(z1bytes + j*fn_bytes, z1[i+j], fn_bytes);
         }
-        for (int k = 0; k < step_bytes; k++) {
-            printf("%x", x1bytes[k]);
-        }
-        printf("\n");
         dx3 = fixnum_array::create(step);
         dy3 = fixnum_array::create(step);
         dz3 = fixnum_array::create(step);
@@ -703,6 +689,7 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
         dz3->retrieve_all(z3bytes, step_bytes, &size);
          
 #if 1
+        // start add from second element
         int start = 1;
         if (i == 0) {
             rx3 = fixnum_array::create(x3bytes + start * fn_bytes, fn_bytes, fn_bytes);
@@ -743,16 +730,20 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
     rx3->retrieve_all(x3, fn_bytes, &size);
     ry3->retrieve_all(y3, fn_bytes, &size);
     rz3->retrieve_all(z3, fn_bytes, &size);
-        for (int k = 0; k < fn_bytes; k++) {
-            printf("%x", x3[k]);
-        }
-        printf("\n");
-        for (int k = 0; k < fn_bytes; k++) {
-            printf("%x", y3[k]);
-        }
-        printf("\n");
-        for (int k = 0; k < fn_bytes; k++) {
-            printf("%x", z3[k]);
-        }
+
+    printf("final result");
+    printf("\nx3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+        printf("%x", x3[k]);
+    }
+    printf("\ny3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+        printf("%x", y3[k]);
+    }
+    printf("\nz3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+       printf("%x", z3[k]);
+    }
+    printf("\n");
     return 0;
 }
