@@ -8,6 +8,7 @@
 #include "functions/multi_modexp.cu"
 #include "modnum/modnum_monty_redc.cu"
 #include "modnum/modnum_monty_cios.cu"
+int do_calc_np_sigma(int n, std::vector<uint8_t *> scaler, std::vector<uint8_t *> x1, std::vector<uint8_t *> y1, std::vector<uint8_t *> z1, uint8_t *x3, uint8_t *y3, uint8_t *z3);
 
 using namespace std;
 using namespace cuFIXNUM;
@@ -139,6 +140,18 @@ __device__ void pq_plus_inner(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnu
 template< typename fixnum >
 struct pq_plus {
     __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
+        if (fixnum::is_zero(x1) && fixnum::is_zero(z1)) {
+            x3 = x2;
+            y3 = y2;
+            z3 = z2;
+            return;
+        }
+        if (fixnum::is_zero(x2) && fixnum::is_zero(z2)) {
+            x3 = x1;
+            y3 = y1;
+            z3 = z1;
+            return;
+        }
         pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
   }
 };
@@ -229,14 +242,31 @@ struct calc_np {
     int i = 24*32 - 1;
     bool found_one = false;
     int count = 0;
+#if 0
+    if (threadIdx.x > 23) 
+#endif
+    {
+        dump(w, 24);
+        dump(x1, 24);
+        dump(y1, 24);
+        dump(z1, 24);
+    }
     //while(fixnum::cmp(tempw, fixnum::zero()) && i >= 0) {
-    while(i >= 0) {
+    for (;i >= 0;i--) {
         size_t value = fixnum::get(tempw, i/32);
-        //printf("i %d value[%d] %x\n", i, i/32, value);
+#if 0
+        if (threadIdx.x > 23) {
+            printf("i %d value[%d] %x\n", i, i/32, value);
+        }
+#endif
         if (found_one) {
             p_double_inner(mod, mod, rx, ry, rz, rx, ry, rz);
-            //printf("double result\n");
-            //dump(rx, 24);
+#if 0
+            if (threadIdx.x > 23) {
+            printf("double result\n");
+            dump(rx, 24);
+            }
+#endif
         }
         if ((value)&(1<<i%32)) {
             if (found_one == false) {
@@ -246,18 +276,25 @@ struct calc_np {
             } else {
                 pq_plus_inner(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
             }
-            //printf("add result\n");
-            //dump(rx, 24);
+#if 0
+            if (threadIdx.x > 23) {
+            printf("add result\n");
+            dump(rx, 24);
+            }
+#endif
             found_one = true;
         }
-        i --;
         count ++;
+#if 0
+        if (threadIdx.x > 23) {
         //if (count >20) break;
+        }
+#endif
     }
     x3 = rx;
     y3 = ry;
     z3 = rz;
-#if 0
+#if 1
     printf("final result\n");
     dump(x3, 24);
     dump(y3, 24);
@@ -291,6 +328,7 @@ void bench(int nelts, FILE *in_file, FILE *out_file) {
     std::vector<uint8_t *> x2;
     std::vector<uint8_t *> y2;
     std::vector<uint8_t *> z2;
+    std::vector<uint8_t *> scalar;
 
     uint8_t *input;
     const int DATA_SIZE = fn_bytes;
@@ -336,6 +374,7 @@ void bench(int nelts, FILE *in_file, FILE *out_file) {
 
     // read w
     fread((void *)wbytes, DATA_SIZE, 1, in_file);
+    scalar.emplace_back(wbytes);
     memset(modulus_bytes, step_bytes, 0);
     for(int i = 0; i < step; i++) {
         memcpy(modulus_bytes + i*fn_bytes, wbytes, fn_bytes);
@@ -364,6 +403,13 @@ void bench(int nelts, FILE *in_file, FILE *out_file) {
         z2.emplace_back(input);
 #endif
     }
+#if 1
+    uint8_t rx3[fn_bytes];
+    uint8_t ry3[fn_bytes];
+    uint8_t rz3[fn_bytes];
+    do_calc_np_sigma(1, scalar, x1, y1, z1, rx3, ry3, rz3);
+    return;
+#endif
     c_read = clock() - c;
     clock_t temp, diff;
     fixnum_array *x3, *y3, *z3, *x1in, *y1in, *z1in;
@@ -574,21 +620,27 @@ int do_calc_np(size_t nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t 
     return 0;
 }
 
-int do_calc_np_sigma(size_t nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t *> x1, std::vector<uint8_t *> y1, std::vector<uint8_t *> z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
-    //do_calc_np(nelts, scaler, x1, y1, z1, x3, y3, z3);
+int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t *> x1, std::vector<uint8_t *> y1, std::vector<uint8_t *> z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
+    printf("calc do_calc_np_sigma\n");
+    printf("nelts %d\n", nelts);
+    //do_calc_np(nelts, scaler, x1, y1, z1, x3, y3, z3);
     // calc warp num
+#if 0
     int step = BLOCK_NUM*THREAD_NUM/32;
     while (nelts%step != 0) {
        step = step >> 1; 
     }
-    int size = 0;
-    step = 1; // test
+#endif
+    if (nelts > 2)
+        nelts = 2; //test
+    int step = nelts;
+    int size = nelts;
     int DATA_SIZE = 96;
     int fn_bytes = DATA_SIZE;
-    uint8_t *c_val = new uint8_t[DATA_SIZE*step];
     int step_bytes = fn_bytes * step;
+    uint8_t *c_val = new uint8_t[step_bytes];
     uint8_t *x1bytes = new uint8_t[step_bytes];
     uint8_t *y1bytes = new uint8_t[step_bytes];
     uint8_t *z1bytes = new uint8_t[step_bytes];
@@ -644,19 +696,22 @@ int do_calc_np_sigma(size_t nelts, std::vector<uint8_t *> scaler, std::vector<ui
         z1in = fixnum_array::create(z1bytes, step_bytes, fn_bytes);
         fixnum_array::template map<calc_np>(modulus4, modulusw, x1in, y1in, z1in, dx3, dy3, dz3);
 
-        dx3->retrieve_all(x3bytes, DATA_SIZE*step, &size);
-        dy3->retrieve_all(y3bytes, DATA_SIZE*step, &size);
-        dz3->retrieve_all(z3bytes, DATA_SIZE*step, &size);
+        dx3->retrieve_all(x3bytes, step_bytes, &size);
+        dy3->retrieve_all(y3bytes, step_bytes, &size);
+        dz3->retrieve_all(z3bytes, step_bytes, &size);
          
+#if 0
+        // start add from second element
+        int start = 1;
         if (i == 0) {
-            rx3 = fixnum_array::create(x3bytes, fn_bytes, fn_bytes);
-            ry3 = fixnum_array::create(y3bytes, fn_bytes, fn_bytes);
-            rz3 = fixnum_array::create(z3bytes, fn_bytes, fn_bytes);
+            rx3 = fixnum_array::create(x3bytes + start * fn_bytes, fn_bytes, fn_bytes);
+            ry3 = fixnum_array::create(y3bytes + start * fn_bytes, fn_bytes, fn_bytes);
+            rz3 = fixnum_array::create(z3bytes + start * fn_bytes, fn_bytes, fn_bytes);
             result_set = true;
         }
         int k = 0;
         if (result_set && i == 0) {
-            k = 1;
+            k = start + 1;
         }
         for (; k < step; k ++) {
             x2in = fixnum_array::create(x3bytes + k * fn_bytes, fn_bytes, fn_bytes);
@@ -667,15 +722,42 @@ int do_calc_np_sigma(size_t nelts, std::vector<uint8_t *> scaler, std::vector<ui
             delete y2in;
             delete z2in;
         }
+        // add first element
+        x2in = fixnum_array::create(x3bytes, fn_bytes, fn_bytes);
+        y2in = fixnum_array::create(y3bytes, fn_bytes, fn_bytes);
+        z2in = fixnum_array::create(z3bytes, fn_bytes, fn_bytes);
+        fixnum_array::template map<pq_plus>(modulus4, x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
+        delete x2in;
+        delete y2in;
+        delete z2in;
+        
         delete x1in;
         delete y1in;
         delete z1in;
         delete dx3;
         delete dy3;
         delete dz3;
+#endif
     }
+#if 0
     rx3->retrieve_all(x3, fn_bytes, &size);
     ry3->retrieve_all(y3, fn_bytes, &size);
     rz3->retrieve_all(z3, fn_bytes, &size);
+#endif
+
+    printf("final result");
+    printf("\nx3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+        printf("%x", x3[k]);
+    }
+    printf("\ny3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+        printf("%x", y3[k]);
+    }
+    printf("\nz3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+       printf("%x", z3[k]);
+    }
+    printf("\n");
     return 0;
 }

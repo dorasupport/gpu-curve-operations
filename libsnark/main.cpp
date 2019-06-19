@@ -202,9 +202,12 @@ int run_prover(
     libff::enter_block("Compute the proof");
     libff::enter_block("Multi-exponentiations");
 
+    clock_t start = clock();
     // Now the 5 multi-exponentiations
     G1<ppT> evaluation_At = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
+    clock_t diff = clock() - start;
+    printf("A cost %lld\n", diff);
 #if 0
     G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);

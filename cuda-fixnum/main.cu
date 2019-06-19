@@ -611,6 +611,7 @@ int do_calc_np(size_t nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t 
 }
 
 int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t *> x1, std::vector<uint8_t *> y1, std::vector<uint8_t *> z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+    clock_t start = clock();
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
     printf("calc do_calc_np_sigma\n");
@@ -734,16 +735,18 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
     printf("final result");
     printf("\nx3:");
     for (int k = fn_bytes-1; k >= 0; k--) {
-        printf("%x", x3[k]);
+        printf("%02x", x3[k]);
     }
     printf("\ny3:");
     for (int k = fn_bytes-1; k >= 0; k--) {
-        printf("%x", y3[k]);
+        printf("%02x", y3[k]);
     }
     printf("\nz3:");
     for (int k = fn_bytes-1; k >= 0; k--) {
-       printf("%x", z3[k]);
+       printf("%02x", z3[k]);
     }
     printf("\n");
+    clock_t diff = clock() - start;
+    printf("cost time %lld\n", diff);
     return 0;
 }
