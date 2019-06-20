@@ -733,7 +733,6 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
         dy3->retrieve_all(y3bytes, step_bytes, &size);
         dz3->retrieve_all(z3bytes, step_bytes, &size);
 #ifdef PARALLEL_SIGMA
-        // suppose netls is 2^n + 1 TODO: make sure about it
         int start = nelts%2;
         int rnelts = nelts - start;
         uint8_t *rx, *ry, *rz;
@@ -746,6 +745,15 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
             memcpy(x3bytes + start*MNT_SIZE, rx, rnelts*MNT_SIZE);
             memcpy(y3bytes + start*MNT_SIZE, ry, rnelts*MNT_SIZE);
             memcpy(z3bytes + start*MNT_SIZE, rz, rnelts*MNT_SIZE);
+            if (rnelts%2) {
+                if (start == 0) {
+                    start = 1;
+                    rnelts -= 1;
+                } else {
+                    start = 0;
+                    rnelts += 1;
+                }
+            }
         }
         if (start == 1) {
             // add the first element
