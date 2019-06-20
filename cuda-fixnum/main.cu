@@ -14,6 +14,7 @@ using namespace cuFIXNUM;
 int BLOCK_NUM = 4096;
 const int THREAD_NUM = 1024;
 #define MNT_SIZE (96)
+#define PARALLEL_SIGMA
 // mnt4_q
 const uint8_t mnt4_modulus[MNT_SIZE] = {1,128,94,36,222,99,144,94,159,17,221,44,82,84,157,227,240,37,196,154,113,16,136,99,164,84,114,118,233,204,90,104,56,126,83,203,165,13,15,184,157,5,24,242,118,231,23,177,157,247,90,161,217,36,209,153,141,237,160,232,37,185,253,7,115,216,151,108,249,232,183,94,237,175,143,91,80,151,249,183,173,205,226,238,34,144,34,16,17,196,146,45,198,196,1,0};
 
@@ -610,6 +611,48 @@ int do_calc_np(size_t nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t 
     return 0;
 }
 
+
+inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *rx, uint8_t *ry, uint8_t *rz) {
+    typedef warp_fixnum<96, u32_fixnum> fixnum;
+    typedef fixnum_array<fixnum> fixnum_array;
+    fixnum_array *x1in, *y1in, *z1in, *x2in, *y2in, *z2in;
+    fixnum_array *rx3, *ry3, *rz3;
+
+    int half_bytes = MNT_SIZE*nelts/2;
+    uint8_t *modulus_bytes = new uint8_t[half_bytes];
+    // mnt4 q
+    for(int i = 0; i < nelts/2; i++) {
+        memcpy(modulus_bytes + i*MNT_SIZE, mnt4_modulus, MNT_SIZE);
+    }
+    auto modulus4 = fixnum_array::create(modulus_bytes, half_bytes, MNT_SIZE);
+    x1in = fixnum_array::create(x, half_bytes, MNT_SIZE);
+    y1in = fixnum_array::create(y, half_bytes, MNT_SIZE);
+    z1in = fixnum_array::create(z, half_bytes, MNT_SIZE);
+    x2in = fixnum_array::create(x + half_bytes, half_bytes, MNT_SIZE);
+    y2in = fixnum_array::create(y + half_bytes, half_bytes, MNT_SIZE);
+    z2in = fixnum_array::create(z + half_bytes, half_bytes, MNT_SIZE);
+
+    rx3 = fixnum_array::create(nelts/2);
+    ry3 = fixnum_array::create(nelts/2);
+    rz3 = fixnum_array::create(nelts/2);
+    fixnum_array::template map<pq_plus>(modulus4, x1in, y1in, z1in, x2in, y2in, z2in, rx3, ry3, rz3);
+    
+    int size = nelts/2;
+    rx3->retrieve_all(rx, half_bytes, &size);
+    ry3->retrieve_all(ry, half_bytes, &size);
+    rz3->retrieve_all(rz, half_bytes, &size);
+    delete x1in;
+    delete y1in;
+    delete z1in;
+    delete x2in;
+    delete y2in;
+    delete z2in;
+    delete rx3;
+    delete ry3;
+    delete rz3;
+    delete modulus4;
+}
+
 int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t *> x1, std::vector<uint8_t *> y1, std::vector<uint8_t *> z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
     clock_t start = clock();
     typedef warp_fixnum<96, u32_fixnum> fixnum;
@@ -670,6 +713,7 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
     // sigma result
     fixnum_array *rx3, *ry3, *rz3;
     bool result_set = false;
+    int got_result = false;
 
     for (int i = 0; i < nelts; i+=step) {
         for (int j = 0; j < step; j++) {
@@ -688,8 +732,40 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
         dx3->retrieve_all(x3bytes, step_bytes, &size);
         dy3->retrieve_all(y3bytes, step_bytes, &size);
         dz3->retrieve_all(z3bytes, step_bytes, &size);
-         
-#if 1
+#ifdef PARALLEL_SIGMA
+        // suppose netls is 2^n + 1 TODO: make sure about it
+        int start = nelts%2;
+        int rnelts = nelts - start;
+        uint8_t *rx, *ry, *rz;
+        rx = new uint8_t[MNT_SIZE*rnelts/2];
+        ry = new uint8_t[MNT_SIZE*rnelts/2];
+        rz = new uint8_t[MNT_SIZE*rnelts/2];
+        while(rnelts > 1) {
+            do_sigma(rnelts, 1, x3bytes + start*MNT_SIZE, y3bytes + start*MNT_SIZE, z3bytes + start*MNT_SIZE, rx, ry, rz);
+            rnelts = rnelts >> 1;
+            memcpy(x3bytes + start*MNT_SIZE, rx, rnelts*MNT_SIZE);
+            memcpy(y3bytes + start*MNT_SIZE, ry, rnelts*MNT_SIZE);
+            memcpy(z3bytes + start*MNT_SIZE, rz, rnelts*MNT_SIZE);
+        }
+        if (start == 1) {
+            // add the first element
+            x2in = fixnum_array::create(x3bytes, fn_bytes, fn_bytes);
+            y2in = fixnum_array::create(y3bytes, fn_bytes, fn_bytes);
+            z2in = fixnum_array::create(z3bytes, fn_bytes, fn_bytes);
+            rx3 = fixnum_array::create(x3bytes + fn_bytes, fn_bytes, fn_bytes);
+            ry3 = fixnum_array::create(y3bytes + fn_bytes, fn_bytes, fn_bytes);
+            rz3 = fixnum_array::create(z3bytes + fn_bytes, fn_bytes, fn_bytes);
+            fixnum_array::template map<pq_plus>(modulus4, x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
+            delete x2in;
+            delete y2in;
+            delete z2in;
+        } else {
+            memcpy(x3, x3bytes, fn_bytes);
+            memcpy(y3, y3bytes, fn_bytes);
+            memcpy(z3, z3bytes, fn_bytes);
+            got_result = true;
+        }
+#else
         // start add from second element
         int start = 1;
         if (i == 0) {
@@ -702,7 +778,8 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
         if (result_set && i == 0) {
             k = start + 1;
         }
-        for (; k < step; k ++) {
+        for (; k < step; k ++)
+        {
             x2in = fixnum_array::create(x3bytes + k * fn_bytes, fn_bytes, fn_bytes);
             y2in = fixnum_array::create(y3bytes + k * fn_bytes, fn_bytes, fn_bytes);
             z2in = fixnum_array::create(z3bytes + k * fn_bytes, fn_bytes, fn_bytes);
@@ -711,7 +788,7 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
             delete y2in;
             delete z2in;
         }
-        // add first element
+        // add the first element
         x2in = fixnum_array::create(x3bytes, fn_bytes, fn_bytes);
         y2in = fixnum_array::create(y3bytes, fn_bytes, fn_bytes);
         z2in = fixnum_array::create(z3bytes, fn_bytes, fn_bytes);
@@ -719,18 +796,20 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
         delete x2in;
         delete y2in;
         delete z2in;
-        
+#endif
         delete x1in;
         delete y1in;
         delete z1in;
         delete dx3;
         delete dy3;
         delete dz3;
-#endif
     }
-    rx3->retrieve_all(x3, fn_bytes, &size);
-    ry3->retrieve_all(y3, fn_bytes, &size);
-    rz3->retrieve_all(z3, fn_bytes, &size);
+    if (!got_result) {
+        size = 1;
+        rx3->retrieve_all(x3, fn_bytes, &size);
+        ry3->retrieve_all(y3, fn_bytes, &size);
+        rz3->retrieve_all(z3, fn_bytes, &size);
+    }
 
     printf("final result");
     printf("\nx3:");
