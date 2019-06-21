@@ -126,8 +126,11 @@ static __device__ void p_double_inner(fixnum mod, fixnum a, fixnum x1, fixnum y1
     m.mul(ZZ, z1, z1);
 
     fixnum w;
-    // w = a*ZZ+3*XX    a = 2
+    // w = a*ZZ+3*XX    a = 11
     m.add(temp, ZZ, ZZ);
+    for (int i = 0; i < 10; i ++) {
+        m.add(temp, temp, ZZ);
+    }
     m.add(temp2, XX, XX);
     m.add(temp2, temp2, XX);
     m.add(w, temp, temp2);
