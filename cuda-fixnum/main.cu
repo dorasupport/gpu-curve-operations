@@ -387,7 +387,7 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
             memcpy(x3bytes + start*MNT_SIZE, rx, rnelts*MNT_SIZE);
             memcpy(y3bytes + start*MNT_SIZE, ry, rnelts*MNT_SIZE);
             memcpy(z3bytes + start*MNT_SIZE, rz, rnelts*MNT_SIZE);
-            if (rnelts%2) {
+            if (rnelts > 1 && rnelts%2) {
                 if (start == 0) {
                     start = 1;
                     rnelts -= 1;
