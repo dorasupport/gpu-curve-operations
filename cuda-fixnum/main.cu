@@ -172,7 +172,7 @@ __device__ void p_double_inner(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixnu
     m.mul(ZZ, z1, z1);
 
     fixnum w;
-    // w = a*ZZ+3*XX    TODO: correct a, cur = 2
+    // w = a*ZZ+3*XX    a = 2
     m.add(temp, ZZ, ZZ);
     m.add(temp2, XX, XX);
     m.add(temp2, temp2, XX);
@@ -651,9 +651,10 @@ inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, ui
     delete ry3;
     delete rz3;
     delete modulus4;
+    delete modulus_bytes;
 }
 
-int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t *> x1, std::vector<uint8_t *> y1, std::vector<uint8_t *> z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
     clock_t start = clock();
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
@@ -672,10 +673,12 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
     int DATA_SIZE = 96;
     int fn_bytes = DATA_SIZE;
     int step_bytes = fn_bytes * step;
-    uint8_t *c_val = new uint8_t[step_bytes];
-    uint8_t *x1bytes = new uint8_t[step_bytes];
-    uint8_t *y1bytes = new uint8_t[step_bytes];
-    uint8_t *z1bytes = new uint8_t[step_bytes];
+    //uint8_t *x1bytes = new uint8_t[step_bytes];
+    //uint8_t *y1bytes = new uint8_t[step_bytes];
+    //uint8_t *z1bytes = new uint8_t[step_bytes];
+    uint8_t *x1bytes = x1;
+    uint8_t *y1bytes = y1;
+    uint8_t *z1bytes = z1;
     uint8_t *x3bytes = new uint8_t[step_bytes];
     uint8_t *y3bytes = new uint8_t[step_bytes];
     uint8_t *z3bytes = new uint8_t[step_bytes];
@@ -704,11 +707,13 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
     auto mnt4a = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
 
     // scaler
+#if 0
     memset(modulus_bytes, step_bytes, 0);
     for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, scaler[i], fn_bytes);
+        memcpy(modulus_bytes + i*fn_bytes, scalar[i], fn_bytes);
     }
-    auto modulusw = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
+#endif
+    auto modulusw = fixnum_array::create(scalar, step_bytes, fn_bytes);
     
     // sigma result
     fixnum_array *rx3, *ry3, *rz3;
@@ -716,11 +721,13 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
     int got_result = false;
 
     for (int i = 0; i < nelts; i+=step) {
+#if 0
         for (int j = 0; j < step; j++) {
             memcpy(x1bytes + j*fn_bytes, x1[i+j], fn_bytes);
             memcpy(y1bytes + j*fn_bytes, y1[i+j], fn_bytes);
             memcpy(z1bytes + j*fn_bytes, z1[i+j], fn_bytes);
         }
+#endif
         dx3 = fixnum_array::create(step);
         dy3 = fixnum_array::create(step);
         dz3 = fixnum_array::create(step);
@@ -755,6 +762,9 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
                 }
             }
         }
+        delete rx;
+        delete ry;
+        delete rz;
         if (start == 1) {
             // add the first element
             x2in = fixnum_array::create(x3bytes, fn_bytes, fn_bytes);
@@ -817,7 +827,19 @@ int do_calc_np_sigma(int nelts, std::vector<uint8_t *> scaler, std::vector<uint8
         rx3->retrieve_all(x3, fn_bytes, &size);
         ry3->retrieve_all(y3, fn_bytes, &size);
         rz3->retrieve_all(z3, fn_bytes, &size);
+        delete rx3;
+        delete ry3;
+        delete rz3;
     }
+#if 0
+    delete x1bytes;
+    delete y1bytes;
+    delete z1bytes;
+#endif
+    delete x3bytes;
+    delete y3bytes;
+    delete z3bytes;
+    delete modulus_bytes;
 
     printf("final result");
     printf("\nx3:");

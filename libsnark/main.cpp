@@ -178,6 +178,7 @@ int run_prover(
     const char* input_path,
     const char* output_path)
 {
+    clock_t start = clock();
     ppT::init_public_params();
 
     const size_t primary_input_size = 1;
@@ -200,12 +201,9 @@ int run_prover(
     libff::enter_block("Compute the proof");
     libff::enter_block("Multi-exponentiations");
 
-    clock_t start = clock();
     // Now the 5 multi-exponentiations
     G1<ppT> evaluation_At = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
-    clock_t diff = clock() - start;
-    printf("A cost %lld\n", diff);
     G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
 
@@ -237,6 +235,8 @@ int run_prover(
     output.write(output_path);
 #endif
 
+  clock_t diff = clock() - start;
+  printf("all cost %lld\n", diff);
     return 0;
 }
 
@@ -247,7 +247,6 @@ int main(int argc, const char * argv[])
   return 0;
 #endif
   
-  clock_t start = clock();
   setbuf(stdout, NULL);
   std::string curve(argv[1]);
   std::string mode(argv[2]);
@@ -265,8 +264,6 @@ int main(int argc, const char * argv[])
       return run_prover<mnt6753_pp>(params_path, input_path, output_path);
     }
   }
-  clock_t diff = clock() - start;
-  printf("total cost %lld\n", diff);
 }
 
 template<typename ppT>
