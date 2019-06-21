@@ -9,12 +9,14 @@
 #include "modnum/modnum_monty_redc.cu"
 #include "modnum/modnum_monty_cios.cu"
 #include "mnt4_g1.cu"
+#include "mnt4_g2.cu"
+#include "mnt6_g1.cu"
+#include "mnt6_g2.cu"
 
 using namespace std;
 using namespace cuFIXNUM;
-using namespace MNT4_G;
+using namespace MNT_G;
 int BLOCK_NUM = 4096;
-const int THREAD_NUM = 1024;
 #define MNT_SIZE (96)
 #define PARALLEL_SIGMA
 
@@ -41,27 +43,31 @@ template< typename fixnum >
 struct mnt4g1_pq_plus {
     __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
         typedef mnt4_g1<fixnum> mnt4g1;
-        if (fixnum::is_zero(x1) && fixnum::is_zero(z1)) {
-            x3 = x2;
-            y3 = y2;
-            z3 = z2;
-            return;
-        }
-        if (fixnum::is_zero(x2) && fixnum::is_zero(z2)) {
-            x3 = x1;
-            y3 = y1;
-            z3 = z1;
-            return;
-        }
         mnt4g1::pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
   }
 };
 
 template< typename fixnum >
-struct mng4g1_p_double {
-    __device__ void operator()(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
-        typedef mnt4_g1<fixnum> mnt4g1;
-        mnt4g1::p_double_inner(mod, a, x1, y1, z1, x3, y3, z3);
+struct mnt4g2_pq_plus {
+    __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
+        typedef mnt4_g2<fixnum> mnt4g2;
+        mnt4g2::pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
+  }
+};
+
+template< typename fixnum >
+struct mnt6g1_pq_plus {
+    __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
+        typedef mnt6_g1<fixnum> mnt6g1;
+        mnt6g1::pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
+  }
+};
+
+template< typename fixnum >
+struct mnt6g2_pq_plus {
+    __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
+        typedef mnt6_g2<fixnum> mnt6g2;
+        mnt6g2::pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
   }
 };
 
@@ -137,81 +143,110 @@ struct mnt4g1_calc_np {
   }
 };
 
-int do_calc_np(size_t nelts, std::vector<uint8_t *> scaler, std::vector<uint8_t *> x1, std::vector<uint8_t *> y1, std::vector<uint8_t *> z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
-    typedef warp_fixnum<96, u32_fixnum> fixnum;
-    typedef fixnum_array<fixnum> fixnum_array;
-    // calc warp num
-    int step = BLOCK_NUM*THREAD_NUM/32;
-    while (nelts%step != 0) {
-       step = step >> 1; 
-    }
-    int size = 0;
-    step = 1; // test
-    int DATA_SIZE = 96;
-    int fn_bytes = DATA_SIZE;
-    uint8_t *c_val = new uint8_t[DATA_SIZE*step];
-    int step_bytes = fn_bytes * step;
-    uint8_t *x1bytes = new uint8_t[step_bytes];
-    uint8_t *y1bytes = new uint8_t[step_bytes];
-    uint8_t *z1bytes = new uint8_t[step_bytes];
-    fixnum_array *dx3, *dy3, *dz3, *x1in, *y1in, *z1in;
-    uint8_t *modulus_bytes = new uint8_t[step_bytes];
-    // mnt4 q
-    memset(modulus_bytes, step_bytes, 0);
-    for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, mnt4_modulus, fn_bytes);
-    }
-    auto modulus4 = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
-
-    // mnt6 q
-    memset(modulus_bytes, step_bytes, 0);
-    for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, mnt6_modulus, fn_bytes);
-    }
-    auto modulus6 = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
-
-    // mnt4 a
-    memset(modulus_bytes, step_bytes, 0);
-    for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, mnt4_a, fn_bytes);
-    }
-    auto mnt4a = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
-
-    // scaler
-    memset(modulus_bytes, step_bytes, 0);
-    for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, scaler[i], fn_bytes);
-    }
-    auto modulusw = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
-
-    for (int i = 0; i < nelts; i+=step) {
-        for (int j = 0; j < step; j++) {
-            memcpy(x1bytes + j*fn_bytes, x1[i+j], fn_bytes);
-            memcpy(y1bytes + j*fn_bytes, y1[i+j], fn_bytes);
-            memcpy(z1bytes + j*fn_bytes, z1[i+j], fn_bytes);
+template< typename fixnum >
+struct mnt4g2_calc_np {
+    __device__ void operator()(fixnum mod, fixnum w, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
+    typedef modnum_monty_cios<fixnum> modnum;
+    typedef mnt4_g2<fixnum> mnt4g2;
+    modnum m(mod);
+    fixnum rx, ry, rz;
+    fixnum tempw = w;
+    int i = 24*32 - 1;
+    bool found_one = false;
+    int count = 0;
+    while(i >= 0) {
+        size_t value = fixnum::get(tempw, i/32);
+        if (found_one) {
+            mnt4g2::p_double_inner(mod, mod, rx, ry, rz, rx, ry, rz);
         }
-        dx3 = fixnum_array::create(step);
-        dy3 = fixnum_array::create(step);
-        dz3 = fixnum_array::create(step);
-        x1in = fixnum_array::create(x1bytes, step_bytes, fn_bytes);
-        y1in = fixnum_array::create(y1bytes, step_bytes, fn_bytes);
-        z1in = fixnum_array::create(z1bytes, step_bytes, fn_bytes);
-        fixnum_array::template map<mnt4g1_calc_np>(modulus4, modulusw, x1in, y1in, z1in, dx3, dy3, dz3);
-
-        //memset(c_val, 0x0, DATA_SIZE*step);
-        dx3->retrieve_all(x3 + i*DATA_SIZE*step, DATA_SIZE*step, &size);
-        dy3->retrieve_all(y3 + i*DATA_SIZE*step, DATA_SIZE*step, &size);
-        dz3->retrieve_all(z3 + i*DATA_SIZE*step, DATA_SIZE*step, &size);
-        delete x1in;
-        delete y1in;
-        delete z1in;
-        delete dx3;
-        delete dy3;
-        delete dz3;
+        if ((value)&(1<<i%32)) {
+            if (found_one == false) {
+                rx = x1;
+                ry = y1;
+                rz = z1;
+            } else {
+                mnt4g2::pq_plus_inner(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
+            }
+            found_one = true;
+        }
+        i --;
+        count ++;
     }
-    return 0;
-}
+    x3 = rx;
+    y3 = ry;
+    z3 = rz;
+  }
+};
 
+template< typename fixnum >
+struct mnt6g1_calc_np {
+    __device__ void operator()(fixnum mod, fixnum w, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
+    typedef modnum_monty_cios<fixnum> modnum;
+    typedef mnt6_g1<fixnum> mnt6g1;
+    modnum m(mod);
+    fixnum rx, ry, rz;
+    fixnum tempw = w;
+    int i = 24*32 - 1;
+    bool found_one = false;
+    int count = 0;
+    while(i >= 0) {
+        size_t value = fixnum::get(tempw, i/32);
+        if (found_one) {
+            mnt6g1::p_double_inner(mod, mod, rx, ry, rz, rx, ry, rz);
+        }
+        if ((value)&(1<<i%32)) {
+            if (found_one == false) {
+                rx = x1;
+                ry = y1;
+                rz = z1;
+            } else {
+                mnt6g1::pq_plus_inner(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
+            }
+            found_one = true;
+        }
+        i --;
+        count ++;
+    }
+    x3 = rx;
+    y3 = ry;
+    z3 = rz;
+  }
+};
+
+template< typename fixnum >
+struct mnt6g2_calc_np {
+    __device__ void operator()(fixnum mod, fixnum w, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
+    typedef modnum_monty_cios<fixnum> modnum;
+    typedef mnt6_g2<fixnum> mnt6g2;
+    modnum m(mod);
+    fixnum rx, ry, rz;
+    fixnum tempw = w;
+    int i = 24*32 - 1;
+    bool found_one = false;
+    int count = 0;
+    while(i >= 0) {
+        size_t value = fixnum::get(tempw, i/32);
+        if (found_one) {
+            mnt6g2::p_double_inner(mod, mod, rx, ry, rz, rx, ry, rz);
+        }
+        if ((value)&(1<<i%32)) {
+            if (found_one == false) {
+                rx = x1;
+                ry = y1;
+                rz = z1;
+            } else {
+                mnt6g2::pq_plus_inner(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
+            }
+            found_one = true;
+        }
+        i --;
+        count ++;
+    }
+    x3 = rx;
+    y3 = ry;
+    z3 = rz;
+  }
+};
 
 inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *rx, uint8_t *ry, uint8_t *rz) {
     typedef warp_fixnum<96, u32_fixnum> fixnum;
@@ -287,21 +322,21 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
     fixnum_array *x2in, *y2in, *z2in;
     uint8_t *modulus_bytes = new uint8_t[step_bytes];
     // mnt4 q
-    memset(modulus_bytes, step_bytes, 0);
+    memset(modulus_bytes, 0x0, step_bytes);
     for(int i = 0; i < step; i++) {
         memcpy(modulus_bytes + i*fn_bytes, mnt4_modulus, fn_bytes);
     }
     auto modulus4 = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
 
     // mnt6 q
-    memset(modulus_bytes, step_bytes, 0);
+    memset(modulus_bytes, 0x0, step_bytes);
     for(int i = 0; i < step; i++) {
         memcpy(modulus_bytes + i*fn_bytes, mnt6_modulus, fn_bytes);
     }
     auto modulus6 = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
 
     // mnt4 a
-    memset(modulus_bytes, step_bytes, 0);
+    memset(modulus_bytes, 0x0, step_bytes);
     for(int i = 0; i < step; i++) {
         memcpy(modulus_bytes + i*fn_bytes, mnt4_a, fn_bytes);
     }
@@ -309,7 +344,7 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
 
     // scaler
 #if 0
-    memset(modulus_bytes, step_bytes, 0);
+    memset(modulus_bytes, 0x0, step_bytes);
     for(int i = 0; i < step; i++) {
         memcpy(modulus_bytes + i*fn_bytes, scalar[i], fn_bytes);
     }
@@ -318,7 +353,6 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
     
     // sigma result
     fixnum_array *rx3, *ry3, *rz3;
-    bool result_set = false;
     int got_result = false;
 
     for (int i = 0; i < nelts; i+=step) {
@@ -385,6 +419,7 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
             got_result = true;
         }
 #else
+        bool result_set = false;
         // start add from second element
         int start = 1;
         if (i == 0) {
@@ -411,7 +446,7 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
         x2in = fixnum_array::create(x3bytes, fn_bytes, fn_bytes);
         y2in = fixnum_array::create(y3bytes, fn_bytes, fn_bytes);
         z2in = fixnum_array::create(z3bytes, fn_bytes, fn_bytes);
-        fixnum_array::template map<pq_plus>(modulus4, x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
+        fixnum_array::template map<mnt4g1_pq_plus>(modulus4, x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
         delete x2in;
         delete y2in;
         delete z2in;
@@ -457,6 +492,6 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
     }
     printf("\n");
     clock_t diff = clock() - start;
-    printf("cost time %lld\n", diff);
+    printf("cost time %ld\n", diff);
     return 0;
 }

@@ -12,7 +12,7 @@
 using namespace std;
 using namespace cuFIXNUM;
 
-namespace MNT6_G{
+namespace MNT_G{
 template< typename fixnum >
 class mnt6_g1 {
 public:
@@ -26,6 +26,18 @@ __device__ void dump(fixnum n, int size) {
 }
 
 static __device__ void pq_plus_inner(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
+    if (fixnum::is_zero(x1) && fixnum::is_zero(z1)) {
+        x3 = x2;
+        y3 = y2;
+        z3 = z2;
+        return;
+    }
+    if (fixnum::is_zero(x2) && fixnum::is_zero(z2)) {
+        x3 = x1;
+        y3 = y1;
+        z3 = z1;
+        return;
+    }
     typedef modnum_monty_cios<fixnum> modnum;
     modnum m(mod);
     fixnum y1z2, x1z2, z1z2, y2z1, x2z1;
@@ -94,6 +106,12 @@ static __device__ void pq_plus_inner(fixnum mod, fixnum x1, fixnum y1, fixnum z1
 }
 
 static __device__ void p_double_inner(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
+    if (fixnum::is_zero(x1) && fixnum::is_zero(z1)) {
+        x3 = x1;
+        y3 = y1;
+        z3 = z1;
+        return;
+    }
     typedef modnum_monty_cios<fixnum> modnum;
     modnum m(mod);
 
