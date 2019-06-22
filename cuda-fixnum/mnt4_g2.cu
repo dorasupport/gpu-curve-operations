@@ -25,7 +25,7 @@ __device__ void dump(fixnum n, int size) {
 	printf("dump [%d]=\%x\n", threadIdx.x, fixnum::get(n, threadIdx.x));
 }
 
-static __device__ void fp2_multi(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11,fixnum &r10, fixnum &r11) {
+static __device__ void fp2_multi(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
     typedef modnum_monty_cios<fixnum> modnum;
     modnum m(mod);
     fixnum aA, bB;
@@ -56,7 +56,7 @@ static __device__ void fp2_multi(fixnum mod, fixnum x10, fixnum x11, fixnum y10,
     m.sub(r11, temp, bB);
 }
 
-static __device__ void fp2_sub(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11,fixnum &r10, fixnum &r11) {
+static __device__ void fp2_sub(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
     typedef modnum_monty_cios<fixnum> modnum;
     modnum m(mod);
     
@@ -65,7 +65,7 @@ static __device__ void fp2_sub(fixnum mod, fixnum x10, fixnum x11, fixnum y10, f
     m.sub(r11, x11, y11); 
 }
 
-static __device__ void fp2_add(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11,fixnum &r10, fixnum &r11) {
+static __device__ void fp2_add(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
     typedef modnum_monty_cios<fixnum> modnum;
     modnum m(mod);
     
@@ -147,7 +147,7 @@ static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum y10, f
     fp2_multi(mod, y10, y11, z20, z21, y1z20, y1z21);
 
     // Y2Z1 = Y2*Z1
-    fixnum y2z10, y2z11,
+    fixnum y2z10, y2z11;
     fp2_multi(mod, y20, y21, z10, z11, y2z10, y2z11);
 
     // if (X1Z2 == X2Z1 && Y1Z2 == Y2Z1) TODO

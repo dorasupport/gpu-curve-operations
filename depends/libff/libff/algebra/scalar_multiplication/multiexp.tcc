@@ -453,6 +453,7 @@ T multi_exp_with_mixed_addition(typename std::vector<T>::const_iterator vec_star
     typename std::vector<T>::const_iterator vec_it;
     typename std::vector<FieldT>::const_iterator scalar_it;
     int size = vec_end - vec_start;
+#if 0
     int esize = 96;
     int total_size = size*esize;
     uint8_t *x_val = new uint8_t[total_size];
@@ -490,6 +491,67 @@ T multi_exp_with_mixed_addition(typename std::vector<T>::const_iterator vec_star
     delete z_val;
     delete scalar_val;
     delete val;
+#else
+    int esize = 96;
+    int total_size = size*esize;
+    uint8_t *x0_val = new uint8_t[total_size];
+    uint8_t *x1_val = new uint8_t[total_size];
+    uint8_t *y0_val = new uint8_t[total_size];
+    uint8_t *y1_val = new uint8_t[total_size];
+    uint8_t *z0_val = new uint8_t[total_size];
+    uint8_t *z1_val = new uint8_t[total_size];
+    uint8_t *scalar_val = new uint8_t[total_size];
+    memset(x0_val, 0x0, total_size);
+    memset(x1_val, 0x0, total_size);
+    memset(y0_val, 0x0, total_size);
+    memset(y1_val, 0x0, total_size);
+    memset(z0_val, 0x0, total_size);
+    memset(z1_val, 0x0, total_size);
+    memset(scalar_val, 0x0, total_size);
+    uint8_t x30[esize];
+    uint8_t x31[esize];
+    uint8_t y30[esize];
+    uint8_t y31[esize];
+    uint8_t z30[esize];
+    uint8_t z31[esize];
+    uint8_t *val = new uint8_t[esize];
+
+    int i = 0;
+    for (vec_it = vec_start, scalar_it = scalar_start; vec_it != vec_end; ++vec_it, ++scalar_it)
+    {   
+        memset(val, 0x0, esize);
+        ((*vec_it).X()).c0.mont_repr.as_bytes(val);
+        memcpy(x0_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).X()).c1.mont_repr.as_bytes(val);
+        memcpy(x1_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Y()).c0.mont_repr.as_bytes(val);
+        memcpy(y0_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Y()).c1.mont_repr.as_bytes(val);
+        memcpy(y1_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Z()).c0.mont_repr.as_bytes(val);
+        memcpy(z0_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Z()).c1.mont_repr.as_bytes(val);
+        memcpy(z1_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        (*scalar_it).as_bigint().as_bytes(val);
+        memcpy(scalar_val + i*esize, val, esize);
+        i ++;
+    }
+
+    do_calc_np_sigma_mnt4_g2(size, scalar_val, x0_val, x1_val, y0_val, y1_val, z0_val, z1_val, x30, x31, y30, y31, z30, z31);
+    delete x0_val;
+    delete x1_val;
+    delete y0_val;
+    delete y1_val;
+    delete z0_val;
+    delete z1_val;
+    delete val;
+#endif
     return acc;
 #else
     assert(std::distance(vec_start, vec_end) == std::distance(scalar_start, scalar_end));

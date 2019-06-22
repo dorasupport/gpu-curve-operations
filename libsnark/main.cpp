@@ -193,6 +193,7 @@ int run_prover(
 
     // End reading of parameters and input
 
+#if 0
     libff::enter_block("Call to r1cs_gg_ppzksnark_prover");
     std::vector<Fr<ppT>> coefficients_for_H = compute_H<ppT>(
         parameters.d,
@@ -206,12 +207,14 @@ int run_prover(
         w.begin(), parameters.A.begin(), parameters.m + 1);
     G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
+#endif
 
-#if 0
+#if 1
     G2<ppT> evaluation_Bt2 = multiexp<G2<ppT>, Fr<ppT>>(
         w.begin(), parameters.B2.begin(), parameters.m + 1);
 #endif
 
+#if 0
     G1<ppT> evaluation_Ht = multiexp<G1<ppT>, Fr<ppT>>(
         coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
 
@@ -225,6 +228,8 @@ int run_prover(
     libff::leave_block("Multi-exponentiations");
     libff::leave_block("Compute the proof");
     libff::leave_block("Call to r1cs_gg_ppzksnark_prover");
+#endif
+    
 
 #if 0
     groth16_output<ppT> output(

@@ -443,7 +443,9 @@ r1cs_bg_ppzksnark_proof<ppT> r1cs_bg_ppzksnark_prover(const r1cs_bg_ppzksnark_pr
     libff::Fr_vector<ppT> const_padded_assignment(1, libff::Fr<ppT>::one());
     const_padded_assignment.insert(const_padded_assignment.end(), qap_wit.coefficients_for_ABCs.begin(), qap_wit.coefficients_for_ABCs.end());
 
-    libff::G1<ppT> evaluation_At = libff::multi_exp_with_mixed_addition<libff::G1<ppT>,
+    libff::G1<ppT> evaluation_At;
+#if 0
+ = libff::multi_exp_with_mixed_addition<libff::G1<ppT>,
                                                                         libff::Fr<ppT>,
                                                                         libff::multi_exp_method_BDLO12>(
         pk.A_query.begin(),
@@ -451,6 +453,7 @@ r1cs_bg_ppzksnark_proof<ppT> r1cs_bg_ppzksnark_prover(const r1cs_bg_ppzksnark_pr
         const_padded_assignment.begin(),
         const_padded_assignment.begin() + qap_wit.num_variables() + 1,
         chunks);
+#endif
     libff::leave_block("Compute evaluation to A-query", false);
 
     libff::enter_block("Compute evaluation to B-query", false);
@@ -478,7 +481,9 @@ r1cs_bg_ppzksnark_proof<ppT> r1cs_bg_ppzksnark_prover(const r1cs_bg_ppzksnark_pr
     libff::leave_block("Compute evaluation to H-query", false);
 
     libff::enter_block("Compute evaluation to L-query", false);
-    libff::G1<ppT> evaluation_Lt = libff::multi_exp_with_mixed_addition<libff::G1<ppT>,
+    libff::G1<ppT> evaluation_Lt;
+#if 0
+ = libff::multi_exp_with_mixed_addition<libff::G1<ppT>,
                                                                         libff::Fr<ppT>,
                                                                         libff::multi_exp_method_BDLO12>(
         pk.L_query.begin(),
@@ -486,6 +491,7 @@ r1cs_bg_ppzksnark_proof<ppT> r1cs_bg_ppzksnark_prover(const r1cs_bg_ppzksnark_pr
         const_padded_assignment.begin() + qap_wit.num_inputs() + 1,
         const_padded_assignment.begin() + qap_wit.num_variables() + 1,
         chunks);
+#endif
     libff::leave_block("Compute evaluation to L-query", false);
 
     /* A = alpha + sum_i(a_i*A_i(t)) + r*delta */
