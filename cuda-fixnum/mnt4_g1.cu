@@ -25,7 +25,7 @@ __device__ void dump(fixnum n, int size) {
 	printf("dump [%d]=\%x\n", threadIdx.x, fixnum::get(n, threadIdx.x));
 }
 
-static __device__ void pq_plus_inner(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
+static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
     if (fixnum::is_zero(x1) && fixnum::is_zero(z1)) {
         x3 = x2;
         y3 = y2;
@@ -105,7 +105,7 @@ static __device__ void pq_plus_inner(fixnum mod, fixnum x1, fixnum y1, fixnum z1
     m.mul(z3, vvv, z1z2);
 }
 
-static __device__ void p_double_inner(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
+static __device__ void p_double(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
     if (fixnum::is_zero(x1) && fixnum::is_zero(z1)) {
         x3 = x1;
         y3 = y1;

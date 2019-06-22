@@ -43,7 +43,7 @@ template< typename fixnum >
 struct mnt4g1_pq_plus {
     __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
         typedef mnt4_g1<fixnum> mnt4g1;
-        mnt4g1::pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
+        mnt4g1::pq_plus(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
   }
 };
 
@@ -51,7 +51,7 @@ template< typename fixnum >
 struct mnt4g2_pq_plus {
     __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
         typedef mnt4_g2<fixnum> mnt4g2;
-        mnt4g2::pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
+        mnt4g2::pq_plus(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
   }
 };
 
@@ -59,7 +59,7 @@ template< typename fixnum >
 struct mnt6g1_pq_plus {
     __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
         typedef mnt6_g1<fixnum> mnt6g1;
-        mnt6g1::pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
+        mnt6g1::pq_plus(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
   }
 };
 
@@ -67,7 +67,7 @@ template< typename fixnum >
 struct mnt6g2_pq_plus {
     __device__ void operator()(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
         typedef mnt6_g2<fixnum> mnt6g2;
-        mnt6g2::pq_plus_inner(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
+        mnt6g2::pq_plus(mod, x1, y1, z1, x2, y2, z2, x3, y3, z3);
   }
 };
 
@@ -99,7 +99,7 @@ struct mnt4g1_calc_np {
         }
 #endif
         if (found_one) {
-            mnt4g1::p_double_inner(mod, mod, rx, ry, rz, rx, ry, rz);
+            mnt4g1::p_double(mod, mod, rx, ry, rz, rx, ry, rz);
 #if 0
             if (threadIdx.x > 23) {
             printf("double result\n");
@@ -113,7 +113,7 @@ struct mnt4g1_calc_np {
                 ry = y1;
                 rz = z1;
             } else {
-                mnt4g1::pq_plus_inner(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
+                mnt4g1::pq_plus(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
             }
 #if 0
             if (threadIdx.x > 23) {
@@ -157,7 +157,7 @@ struct mnt4g2_calc_np {
     while(i >= 0) {
         size_t value = fixnum::get(tempw, i/32);
         if (found_one) {
-            mnt4g2::p_double_inner(mod, mod, rx, ry, rz, rx, ry, rz);
+            mnt4g2::p_double(mod, mod, rx, ry, rz, rx, ry, rz);
         }
         if ((value)&(1<<i%32)) {
             if (found_one == false) {
@@ -165,7 +165,7 @@ struct mnt4g2_calc_np {
                 ry = y1;
                 rz = z1;
             } else {
-                mnt4g2::pq_plus_inner(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
+                mnt4g2::pq_plus(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
             }
             found_one = true;
         }
@@ -192,7 +192,7 @@ struct mnt6g1_calc_np {
     while(i >= 0) {
         size_t value = fixnum::get(tempw, i/32);
         if (found_one) {
-            mnt6g1::p_double_inner(mod, mod, rx, ry, rz, rx, ry, rz);
+            mnt6g1::p_double(mod, mod, rx, ry, rz, rx, ry, rz);
         }
         if ((value)&(1<<i%32)) {
             if (found_one == false) {
@@ -200,7 +200,7 @@ struct mnt6g1_calc_np {
                 ry = y1;
                 rz = z1;
             } else {
-                mnt6g1::pq_plus_inner(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
+                mnt6g1::pq_plus(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
             }
             found_one = true;
         }
@@ -227,7 +227,7 @@ struct mnt6g2_calc_np {
     while(i >= 0) {
         size_t value = fixnum::get(tempw, i/32);
         if (found_one) {
-            mnt6g2::p_double_inner(mod, mod, rx, ry, rz, rx, ry, rz);
+            mnt6g2::p_double(mod, mod, rx, ry, rz, rx, ry, rz);
         }
         if ((value)&(1<<i%32)) {
             if (found_one == false) {
@@ -235,7 +235,7 @@ struct mnt6g2_calc_np {
                 ry = y1;
                 rz = z1;
             } else {
-                mnt6g2::pq_plus_inner(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
+                mnt6g2::pq_plus(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
             }
             found_one = true;
         }
