@@ -23,6 +23,7 @@
 using namespace libff;
 using namespace libsnark;
 
+#define GPU_CALC
 //const multi_exp_method method = multi_exp_method_BDLO12;
 //const multi_exp_method method = multi_exp_method_bos_coster;
 const multi_exp_method method = multi_exp_method_naive_plain;
@@ -193,7 +194,6 @@ int run_prover(
 
     // End reading of parameters and input
 
-#if 0
     libff::enter_block("Call to r1cs_gg_ppzksnark_prover");
     std::vector<Fr<ppT>> coefficients_for_H = compute_H<ppT>(
         parameters.d,
@@ -207,14 +207,10 @@ int run_prover(
         w.begin(), parameters.A.begin(), parameters.m + 1);
     G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
-#endif
 
-#if 1
     G2<ppT> evaluation_Bt2 = multiexp<G2<ppT>, Fr<ppT>>(
         w.begin(), parameters.B2.begin(), parameters.m + 1);
-#endif
 
-#if 0
     G1<ppT> evaluation_Ht = multiexp<G1<ppT>, Fr<ppT>>(
         coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
 
@@ -228,21 +224,207 @@ int run_prover(
     libff::leave_block("Multi-exponentiations");
     libff::leave_block("Compute the proof");
     libff::leave_block("Call to r1cs_gg_ppzksnark_prover");
-#endif
     
 
-#if 0
     groth16_output<ppT> output(
       std::move(evaluation_At),
       std::move(evaluation_Bt2),
       std::move(C));
 
     output.write(output_path);
-#endif
 
-  clock_t diff = clock() - start;
-  printf("all cost %lld\n", diff);
+    clock_t diff = clock() - start;
+    printf("CPU all cost %lld\n", diff);
     return 0;
+}
+
+template<typename G, typename Fr>
+G multiexpG1(typename std::vector<Fr>::const_iterator scalar_start,
+           typename std::vector<G>::const_iterator g_start,
+           size_t length) {
+    typename std::vector<G>::const_iterator vec_start = g_start;
+    typename std::vector<G>::const_iterator vec_end = g_start + length;
+    typename std::vector<Fr>::const_iterator scalar_end = scalar_start + length;
+    typename std::vector<G>::const_iterator vec_it;
+    typename std::vector<Fr>::const_iterator scalar_it;
+    G acc = G::zero();
+    int size = length;//vec_end - vec_start;
+    int esize = 96;
+    int total_size = size*esize;
+    uint8_t *x_val = new uint8_t[total_size];
+    uint8_t *y_val = new uint8_t[total_size];
+    uint8_t *z_val = new uint8_t[total_size];
+    uint8_t *scalar_val = new uint8_t[total_size];
+    memset(x_val, 0x0, total_size);
+    memset(y_val, 0x0, total_size);
+    memset(z_val, 0x0, total_size);
+    memset(scalar_val, 0x0, total_size);
+    uint8_t x3[esize];
+    uint8_t y3[esize];
+    uint8_t z3[esize];
+    uint8_t *val = new uint8_t[esize];;
+    int i = 0;
+    for (vec_it = vec_start, scalar_it = scalar_start; vec_it != vec_end; ++vec_it, ++scalar_it)
+    {   
+        memset(val, 0x0, esize);
+        ((*vec_it).X()).mont_repr.as_bytes(val);
+        memcpy(x_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Y()).mont_repr.as_bytes(val);
+        memcpy(y_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Z()).mont_repr.as_bytes(val);
+        memcpy(z_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        (*scalar_it).as_bigint().as_bytes(val);
+        memcpy(scalar_val + i*esize, val, esize);
+        i ++;
+    }
+    do_calc_np_sigma(size, scalar_val, x_val, y_val, z_val, x3, y3, z3);
+    delete x_val;
+    delete y_val;
+    delete z_val;
+    delete scalar_val;
+    delete val;
+    return acc;
+}
+
+template<typename G, typename Fr>
+G multiexpG2(typename std::vector<Fr>::const_iterator scalar_start,
+           typename std::vector<G>::const_iterator g_start,
+           size_t length) {
+    typename std::vector<G>::const_iterator vec_start = g_start;
+    typename std::vector<G>::const_iterator vec_end = g_start + length;
+    typename std::vector<Fr>::const_iterator scalar_end = scalar_start + length;
+    typename std::vector<G>::const_iterator vec_it;
+    typename std::vector<Fr>::const_iterator scalar_it;
+    G acc = G::zero();
+    int size = length;//vec_end - vec_start;
+    int esize = 96;
+    int total_size = size*esize;
+    uint8_t *x0_val = new uint8_t[total_size];
+    uint8_t *x1_val = new uint8_t[total_size];
+    uint8_t *y0_val = new uint8_t[total_size];
+    uint8_t *y1_val = new uint8_t[total_size];
+    uint8_t *z0_val = new uint8_t[total_size];
+    uint8_t *z1_val = new uint8_t[total_size];
+    uint8_t *scalar_val = new uint8_t[total_size];
+    memset(x0_val, 0x0, total_size);
+    memset(x1_val, 0x0, total_size);
+    memset(y0_val, 0x0, total_size);
+    memset(y1_val, 0x0, total_size);
+    memset(z0_val, 0x0, total_size);
+    memset(z1_val, 0x0, total_size);
+    memset(scalar_val, 0x0, total_size);
+    uint8_t x30[esize];
+    uint8_t x31[esize];
+    uint8_t y30[esize];
+    uint8_t y31[esize];
+    uint8_t z30[esize];
+    uint8_t z31[esize];
+    uint8_t *val = new uint8_t[esize];
+
+    int i = 0;
+    for (vec_it = vec_start, scalar_it = scalar_start; vec_it != vec_end; ++vec_it, ++scalar_it)
+    {
+        memset(val, 0x0, esize);
+        ((*vec_it).X()).c0.mont_repr.as_bytes(val);
+        memcpy(x0_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).X()).c1.mont_repr.as_bytes(val);
+        memcpy(x1_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Y()).c0.mont_repr.as_bytes(val);
+        memcpy(y0_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Y()).c1.mont_repr.as_bytes(val);
+        memcpy(y1_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Z()).c0.mont_repr.as_bytes(val);
+        memcpy(z0_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Z()).c1.mont_repr.as_bytes(val);
+        memcpy(z1_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        (*scalar_it).as_bigint().as_bytes(val);
+        memcpy(scalar_val + i*esize, val, esize);
+        i ++;
+    }
+
+    do_calc_np_sigma_mnt4_g2(size, scalar_val, x0_val, x1_val, y0_val, y1_val, z0_val, z1_val, x30, x31, y30, y31, z30, z31);
+    delete x0_val;
+    delete x1_val;
+    delete y0_val;
+    delete y1_val;
+    delete z0_val;
+    delete z1_val;
+    delete val;
+    return acc;
+}
+
+template<typename ppT>
+void mnt4g1_prove(
+    const char* params_path,
+    const char* input_path,
+    const char* output_path)
+{
+    clock_t start = clock();
+    ppT::init_public_params();
+
+    const size_t primary_input_size = 1;
+
+    const groth16_parameters<ppT> parameters(params_path);
+    const groth16_input<ppT> input(input_path, parameters.d, parameters.m);
+
+    std::vector<Fr<ppT>> w  = std::move(input.w);
+    std::vector<Fr<ppT>> ca = std::move(input.ca);
+    std::vector<Fr<ppT>> cb = std::move(input.cb);
+    std::vector<Fr<ppT>> cc = std::move(input.cc);
+
+    // End reading of parameters and input
+
+    libff::enter_block("Call to r1cs_gg_ppzksnark_prover");
+
+    std::vector<Fr<ppT>> coefficients_for_H = compute_H<ppT>(
+        parameters.d,
+        ca, cb, cc);
+
+    libff::enter_block("Compute the proof");
+    libff::enter_block("Multi-exponentiations");
+
+// Now the 5 multi-exponentiations
+    G1<ppT> evaluation_At = multiexpG1<G1<ppT>, Fr<ppT>>(
+        w.begin(), parameters.A.begin(), parameters.m + 1);
+
+    G1<ppT> evaluation_Bt1 = multiexpG1<G1<ppT>, Fr<ppT>>(
+        w.begin(), parameters.B1.begin(), parameters.m + 1);
+
+    G2<ppT> evaluation_Bt2 = multiexpG2<G2<ppT>, Fr<ppT>>(
+        w.begin(), parameters.B2.begin(), parameters.m + 1);
+
+    G1<ppT> evaluation_Ht = multiexpG1<G1<ppT>, Fr<ppT>>(
+        coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
+
+    G1<ppT> evaluation_Lt = multiexpG1<G1<ppT>, Fr<ppT>>(
+        w.begin() + primary_input_size + 1,
+        parameters.L.begin(),
+        parameters.m - 1);
+
+    libff::G1<ppT> C = evaluation_Ht + evaluation_Lt + input.r * evaluation_Bt1; /*+ s *  g1_A  - (r * s) * pk.delta_g1; */
+
+    libff::leave_block("Multi-exponentiations");
+    libff::leave_block("Compute the proof");
+    libff::leave_block("Call to r1cs_gg_ppzksnark_prover");
+
+    groth16_output<ppT> output(
+      std::move(evaluation_At),
+      std::move(evaluation_Bt2),
+      std::move(C));
+
+    output.write(output_path);
+
+    clock_t diff = clock() - start;
+    printf("GPU all cost %lld\n", diff);
 }
 
 int main(int argc, const char * argv[])
@@ -261,9 +443,13 @@ int main(int argc, const char * argv[])
   const char* output_path = argv[5];
 
   if (curve == "MNT4753") {
+#ifdef GPU_CALC
+    mnt4g1_prove<mnt4753_pp>(params_path, input_path, output_path);
+#else
     if (mode == "compute") {
       return run_prover<mnt4753_pp>(params_path, input_path, output_path);
     }
+#endif
   } else if (curve == "MNT6753") {
     if (mode == "compute") {
       return run_prover<mnt6753_pp>(params_path, input_path, output_path);
