@@ -23,7 +23,7 @@
 using namespace libff;
 using namespace libsnark;
 
-//#define GPU_CALC
+//#undef MULTICORE
 //const multi_exp_method method = multi_exp_method_BDLO12;
 const multi_exp_method method = multi_exp_method_bos_coster;
 //const multi_exp_method method = multi_exp_method_naive_plain;
@@ -205,19 +205,42 @@ int run_prover(
     // Now the 5 multi-exponentiations
     G1<ppT> evaluation_At = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
+    printf("evaluation_At\n");
+    evaluation_At.X().mont_repr.print_hex();
+    evaluation_At.Y().mont_repr.print_hex();
+    evaluation_At.Z().mont_repr.print_hex();
     G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
+    printf("evaluation_Bt1t\n");
+    evaluation_Bt1.X().mont_repr.print_hex();
+    evaluation_Bt1.Y().mont_repr.print_hex();
+    evaluation_Bt1.Z().mont_repr.print_hex();
 
     G2<ppT> evaluation_Bt2 = multiexp<G2<ppT>, Fr<ppT>>(
         w.begin(), parameters.B2.begin(), parameters.m + 1);
+    printf("evaluation_Bt2\n");
+    evaluation_Bt2.X().c0.mont_repr.print_hex();
+    evaluation_Bt2.X().c1.mont_repr.print_hex();
+    evaluation_Bt2.Y().c0.mont_repr.print_hex();
+    evaluation_Bt2.Y().c1.mont_repr.print_hex();
+    evaluation_Bt2.Z().c0.mont_repr.print_hex();
+    evaluation_Bt2.Z().c1.mont_repr.print_hex();
 
     G1<ppT> evaluation_Ht = multiexp<G1<ppT>, Fr<ppT>>(
         coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
+    printf("evaluation_Ht\n");
+    evaluation_Ht.X().mont_repr.print_hex();
+    evaluation_Ht.Y().mont_repr.print_hex();
+    evaluation_Ht.Z().mont_repr.print_hex();
 
     G1<ppT> evaluation_Lt = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin() + primary_input_size + 1,
         parameters.L.begin(),
         parameters.m - 1);
+    printf("evaluation_Lt\n");
+    evaluation_Lt.X().mont_repr.print_hex();
+    evaluation_Lt.Y().mont_repr.print_hex();
+    evaluation_Lt.Z().mont_repr.print_hex();
 
     libff::G1<ppT> C = evaluation_Ht + evaluation_Lt + input.r * evaluation_Bt1; /*+ s *  g1_A  - (r * s) * pk.delta_g1; */
 
@@ -236,6 +259,21 @@ int run_prover(
     clock_t diff = clock() - start;
     printf("CPU all cost %lld\n", diff);
     return 0;
+}
+
+void setBigData(bigint<mnt4753_q_limbs> *bigintV, uint8_t *val, int size) {
+    for (int i = 0; i < size; i+=8) {
+        unsigned long x0, x1, x2, x3, x4, x5, x6, x7;
+        x0 = val[i];
+        x1 = val[i+1];
+        x2 = val[i+2];
+        x3 = val[i+3];
+        x4 = val[i+4];
+        x5 = val[i+5];
+        x6 = val[i+6];
+        x7 = val[i+7];
+        bigintV->data[i/8] = x7<<56 | x6<<48 | x5<<40 | x4<<32 | x3<<24 | x2<<16 | x1<<8 | x0;
+    }
 }
 
 template<typename G, typename Fr>
@@ -286,11 +324,17 @@ G multiexpG1(typename std::vector<Fr>::const_iterator scalar_start,
     delete z_val;
     delete scalar_val;
     delete val;
-    typedef bigint<mnt4753_q_limbs> bigint_xyz;
-    mnt4753_Fq bigint_x = bigint_xyz(x3[0]);
-    mnt4753_Fq bigint_y = bigint_xyz(y3[0]);
-    mnt4753_Fq bigint_z = bigint_xyz(z3[0]);
+    bigint<mnt4753_q_limbs> bigint_x, bigint_y, bigint_z;
+    setBigData(&bigint_x, x3, esize);
+    setBigData(&bigint_y, y3, esize);
+    setBigData(&bigint_z, z3, esize);
+    bigint_x.print_hex();
+    bigint_y.print_hex();
+    bigint_z.print_hex();
     G result = G(bigint_x, bigint_y, bigint_z);
+    result.X().mont_repr.print_hex();
+    result.Y().mont_repr.print_hex();
+    result.Z().mont_repr.print_hex();
     return result;
 }
 
@@ -364,11 +408,29 @@ G multiexpG2(typename std::vector<Fr>::const_iterator scalar_start,
     delete z0_val;
     delete z1_val;
     delete val;
-    typedef bigint<mnt4753_q_limbs> bigint_xyz;
-    mnt4753_Fq2 bigint_x = mnt4753_Fq2(bigint_xyz(x30[0]), bigint_xyz(x31[0]));
-    mnt4753_Fq2 bigint_y = mnt4753_Fq2(bigint_xyz(y30[0]), bigint_xyz(y31[0]));
-    mnt4753_Fq2 bigint_z = mnt4753_Fq2(bigint_xyz(z30[0]), bigint_xyz(z31[0]));
+    bigint<mnt4753_q_limbs> bigint_x0, bigint_x1, bigint_y0, bigint_y1, bigint_z0, bigint_z1;
+    setBigData(&bigint_x0, x30, esize);
+    setBigData(&bigint_x1, x31, esize);
+    setBigData(&bigint_y0, y30, esize);
+    setBigData(&bigint_y1, y31, esize);
+    setBigData(&bigint_z0, z30, esize);
+    setBigData(&bigint_z1, z31, esize);
+    bigint_x0.print_hex();
+    bigint_x1.print_hex();
+    bigint_y0.print_hex();
+    bigint_y1.print_hex();
+    bigint_z0.print_hex();
+    bigint_z1.print_hex();
+    mnt4753_Fq2 bigint_x = mnt4753_Fq2(bigint_x0, bigint_x1);
+    mnt4753_Fq2 bigint_y = mnt4753_Fq2(bigint_y0, bigint_y1);
+    mnt4753_Fq2 bigint_z = mnt4753_Fq2(bigint_z0, bigint_z1);
     G result = G(bigint_x, bigint_y, bigint_z);
+    result.X().c0.mont_repr.print_hex();
+    result.X().c1.mont_repr.print_hex();
+    result.Y().c0.mont_repr.print_hex();
+    result.Y().c1.mont_repr.print_hex();
+    result.Z().c0.mont_repr.print_hex();
+    result.Z().c1.mont_repr.print_hex();
     return result;
 }
 
