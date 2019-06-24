@@ -16,13 +16,13 @@ namespace MNT_G{
 template< typename fixnum >
 class mnt4_g2 {
 public:
-__device__ void dump(fixnum n, int size) {
+static __device__ void dump(fixnum n, int size) {
 #if 0
 	for (int i = 0; i < size; i++) {
 		printf("DUMP [%d] %x\n", i, fixnum::get(n, i));
 	}
 #endif
-	printf("dump [%d]=\%x\n", threadIdx.x, fixnum::get(n, threadIdx.x));
+	printf("dump [%d]=\%04x\n", threadIdx.x, fixnum::get(n, threadIdx.x));
 }
 
 static __device__ void fp2_multi(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
@@ -38,10 +38,10 @@ static __device__ void fp2_multi(fixnum mod, fixnum x10, fixnum x11, fixnum y10,
     m.mul(bB, b, B);
     
     // r10 = aA + non_residue * bB
-    // non_residue = 17
+    // non_residue = 13
     fixnum temp, temp2;
     temp2= bB;
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 12; i++) {
         m.add(temp, temp2, bB); 
         temp2 = temp;
     }
@@ -89,7 +89,7 @@ static __device__ void fp2_square(fixnum mod, fixnum x10, fixnum x11, fixnum &r1
     // non_residue * b
     fixnum temp, temp2;
     temp2 = b;
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 12; i++) {
         m.add(temp, temp2, b);
         temp2 = temp;
     }
@@ -104,7 +104,7 @@ static __device__ void fp2_square(fixnum mod, fixnum x10, fixnum x11, fixnum &r1
     m.sub(temp, temp, ab);
     // - non_residue * ab
     fixnum temp3 = ab;
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 12; i++) {
         m.add(temp2, temp3, ab);
         temp3 = temp2;
     }
@@ -115,7 +115,25 @@ static __device__ void fp2_square(fixnum mod, fixnum x10, fixnum x11, fixnum &r1
 }
 
 static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum z10, fixnum z11, fixnum x20, fixnum x21, fixnum y20, fixnum y21, fixnum z20, fixnum z21, fixnum &x30, fixnum &x31, fixnum &y30, fixnum &y31, fixnum &z30, fixnum &z31) {
+#if 0
+    printf("4g2 pq_plus\n");
+    printf("x1, y1, z1\n");
+    dump(x10, 24);
+    dump(x11, 24);
+    dump(y10, 24);
+    dump(y11, 24);
+    dump(z10, 24);
+    dump(z11, 24);
+    printf("x2, y2, z2\n");
+    dump(x20, 24);
+    dump(x21, 24);
+    dump(y20, 24);
+    dump(y21, 24);
+    dump(z20, 24);
+    dump(z21, 24);
+#endif
     if (fixnum::is_zero(x10) && fixnum::is_zero(x11) && fixnum::is_zero(z10) && fixnum::is_zero(z11)) {
+        //printf("this zero\n");
         x30 = x20;
         x31 = x21;
         y30 = y20;
@@ -125,6 +143,7 @@ static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum y10, f
         return;
     }
     if (fixnum::is_zero(x20) && fixnum::is_zero(x21) && fixnum::is_zero(z20) && fixnum::is_zero(z21)) {
+        //printf("other zero\n");
         x30 = x10;
         x31 = x11;
         y30 = y10;
@@ -198,6 +217,16 @@ static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum y10, f
 
     // Z3   = vvv*Z1Z2
     fp2_multi(mod, vvv0, vvv1, z1z20, z1z21, z30, z31);
+
+#if 0
+    printf("pq x3, y3, z3:\n");
+    dump(x30, 24);
+    dump(x31, 24);
+    dump(y30, 24);
+    dump(y31, 24);
+    dump(z30, 24);
+    dump(z31, 24);
+#endif
 }
 
 static __device__ void multi_by_a(fixnum mod, fixnum in0, fixnum in1, fixnum &r0, fixnum &r1) {
@@ -205,10 +234,10 @@ static __device__ void multi_by_a(fixnum mod, fixnum in0, fixnum in1, fixnum &r0
     // mnt4_twist_mul_by_a_c0 = mnt4_G1::coeff_a * mnt4_Fq2::non_residue;
     // mnt4_twist_mul_by_a_c1 = mnt4_G1::coeff_a * mnt4_Fq2::non_residue;
     // mnt4_G1::coeff_a = mnt4_Fq("2");
-    // mnt4_Fq2::non_residue = mnt4_Fq("17");
+    // mnt4_Fq2::non_residue = mnt4_Fq("13");
     typedef modnum_monty_cios<fixnum> modnum;
     modnum m(mod);
-    int an = 34;   //2*17
+    int an = 26;   //2*13
     fixnum temp;
     temp = in0;
     for (int i = 0; i < an - 1; i ++) {
@@ -216,14 +245,25 @@ static __device__ void multi_by_a(fixnum mod, fixnum in0, fixnum in1, fixnum &r0
         temp = r0;
     } 
     temp = in1;
-    for (int i = 0; i < an; i ++) {
+    for (int i = 0; i < an - 1; i ++) {
         m.add(r1, temp, in1); 
         temp = r1;
     } 
 }
 
 static __device__ void p_double(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum z10, fixnum z11, fixnum &x30, fixnum &x31, fixnum &y30, fixnum &y31, fixnum &z30, fixnum &z31) {
+#if 0
+    printf("4g2 q double\n");
+    printf("x1, y1, z1\n");
+    dump(x10, 24);
+    dump(x11, 24);
+    dump(y10, 24);
+    dump(y11, 24);
+    dump(z10, 24);
+    dump(z11, 24);
+#endif
     if (fixnum::is_zero(x10) && fixnum::is_zero(x11) && fixnum::is_zero(z10) && fixnum::is_zero(z11)) {
+        //printf("this zero\n");
         x30 = x10;
         x31 = x11;
         y30 = y10;
@@ -283,7 +323,7 @@ static __device__ void p_double(fixnum mod, fixnum x10, fixnum x11, fixnum y10, 
     fixnum h0, h1;
     fp2_square(mod, w0, w1, h0, h1);
     fp2_add(mod, B0, B1, B0, B1, temp0, temp1);
-    fp2_sub(mod, B0, B1, temp0, temp1, B0, B1);
+    fp2_sub(mod, h0, h1, temp0, temp1, h0, h1);
 
     // X3  = h*s
     fp2_multi(mod, h0, h1, s0, s1, x30, x31);
@@ -297,6 +337,15 @@ static __device__ void p_double(fixnum mod, fixnum x10, fixnum x11, fixnum y10, 
     // Z3  = sss
     z30 = sss0;
     z31 = sss1;
+#if 0
+    printf("dbl x3, y3, z3:\n");
+    dump(x30, 24);
+    dump(x31, 24);
+    dump(y30, 24);
+    dump(y31, 24);
+    dump(z30, 24);
+    dump(z31, 24);
+#endif
 }
 
 };

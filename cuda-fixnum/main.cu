@@ -155,6 +155,7 @@ struct mnt4g2_calc_np {
     int count = 0;
     while(i >= 0) {
         size_t value = fixnum::get(tempw, i/32);
+        //printf("value[%d] is %x\n", i, value);
         if (found_one) {
             mnt4g2::p_double(mod, x30, x31, y30, y31, z30, z31, x30, x31, y30, y31, z30, z31);
         }
@@ -173,6 +174,7 @@ struct mnt4g2_calc_np {
         }
         i --;
         count ++;
+        //if (count >= 50) break;
     }
   }
 };
@@ -550,12 +552,54 @@ inline void do_sigma(int nelts, int type, uint8_t *x0, uint8_t *x1, uint8_t *y0,
     delete modulus_bytes;
 }
 
+void print_g2(uint8_t *x30, uint8_t *x31, uint8_t *y30, uint8_t *y31, uint8_t *z30, uint8_t *z31) {
+    int fn_bytes = 96;
+    printf("\nx3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+        printf("%02x", x30[k]);
+    }
+    printf(",");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+        printf("%02x", x31[k]);
+    }
+    printf("\ny3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+        printf("%02x", y30[k]);
+    }
+    printf(",");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+        printf("%02x", y31[k]);
+    }
+    printf("\nz3:");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+       printf("%02x", z30[k]);
+    }
+    printf(",");
+    for (int k = fn_bytes-1; k >= 0; k--) {
+       printf("%02x", z31[k]);
+    }
+    printf("\n");
+
+}
+
 int do_calc_np_sigma_mnt4_g2(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t* x11, uint8_t* y10, uint8_t* y11, uint8_t* z10, uint8_t* z11, uint8_t *x30, uint8_t *x31, uint8_t *y30, uint8_t *y31, uint8_t *z30, uint8_t *z31) {
     clock_t start = clock();
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
     printf("calc do_calc_np_sigma_mnt4_g2\n");
     printf("nelts %d\n", nelts);
+    // test
+#if 0
+    nelts = 1;
+    int sn = 96;
+    x10 += sn;
+    x11 += sn;
+    y10 += sn;
+    y11 += sn;
+    z10 += sn;
+    z11 += sn;
+    scalar += sn;
+#endif
     int step = nelts;
     int size = nelts;
     int DATA_SIZE = 96;
@@ -604,6 +648,58 @@ int do_calc_np_sigma_mnt4_g2(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t*
     fixnum_array *rx30, *rx31, *ry30, *ry31, *rz30, *rz31;
     int got_result = false;
 
+#if 0
+    printf("x10:\n");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", x10bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\nx11:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", x11bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\ny10:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", y10bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\ny11:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", y11bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\nz10:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", z10bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\nz11:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", z11bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\nscalar:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", scalar[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\n");
+#endif
     for (int i = 0; i < nelts; i+=step) {
         dx30 = fixnum_array::create(step);
         dx31 = fixnum_array::create(step);
@@ -690,6 +786,64 @@ int do_calc_np_sigma_mnt4_g2(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t*
             memcpy(z31, z31bytes, fn_bytes);
             got_result = true;
         }
+#else
+        bool result_set = false;
+        // start add from second element
+        int start = 1;
+        if (i == 0) {
+            //print_g2(x30bytes + start * fn_bytes, x31bytes + start * fn_bytes, y30bytes + start * fn_bytes, y31bytes + start * fn_bytes, z30bytes + start * fn_bytes, z31bytes + start * fn_bytes);
+            rx30 = fixnum_array::create(x30bytes + start * fn_bytes, fn_bytes, fn_bytes);
+            rx31 = fixnum_array::create(x31bytes + start * fn_bytes, fn_bytes, fn_bytes);
+            ry30 = fixnum_array::create(y30bytes + start * fn_bytes, fn_bytes, fn_bytes);
+            ry31 = fixnum_array::create(y31bytes + start * fn_bytes, fn_bytes, fn_bytes);
+            rz30 = fixnum_array::create(z30bytes + start * fn_bytes, fn_bytes, fn_bytes);
+            rz31 = fixnum_array::create(z31bytes + start * fn_bytes, fn_bytes, fn_bytes);
+            result_set = true;
+        }
+        int k = 0;
+        if (result_set && i == 0) {
+            k = start + 1;
+        }
+        for (; k < step; k ++)
+        {
+            //print_g2(x30bytes + k * fn_bytes, x31bytes + k * fn_bytes, y30bytes + k * fn_bytes, y31bytes + k * fn_bytes, z30bytes + k * fn_bytes, z31bytes + k * fn_bytes);
+            x20in = fixnum_array::create(x30bytes + k * fn_bytes, fn_bytes, fn_bytes);
+            x21in = fixnum_array::create(x31bytes + k * fn_bytes, fn_bytes, fn_bytes);
+            y20in = fixnum_array::create(y30bytes + k * fn_bytes, fn_bytes, fn_bytes);
+            y21in = fixnum_array::create(y31bytes + k * fn_bytes, fn_bytes, fn_bytes);
+            z20in = fixnum_array::create(z30bytes + k * fn_bytes, fn_bytes, fn_bytes);
+            z21in = fixnum_array::create(z31bytes + k * fn_bytes, fn_bytes, fn_bytes);
+            fixnum_array::template map<mnt4g2_pq_plus>(modulus4, rx30, rx31, ry30, ry31, rz30, rz31, x20in, x21in, y20in, y21in, z20in, z21in, rx30, rx31, ry30, ry31, rz30, rz31);
+            delete x20in;
+            delete x21in;
+            delete y20in;
+            delete y21in;
+            delete z20in;
+            delete z21in;
+#if 0
+        rx30->retrieve_all(x30, fn_bytes, &size);
+        rx31->retrieve_all(x31, fn_bytes, &size);
+        ry30->retrieve_all(y30, fn_bytes, &size);
+        ry31->retrieve_all(y31, fn_bytes, &size);
+        rz30->retrieve_all(z30, fn_bytes, &size);
+        rz31->retrieve_all(z31, fn_bytes, &size);
+            print_g2(x30, x31, y30, y31, z30, z31);
+#endif
+        }
+        // add the first element
+        x20in = fixnum_array::create(x30bytes, fn_bytes, fn_bytes);
+        x21in = fixnum_array::create(x31bytes, fn_bytes, fn_bytes);
+        y20in = fixnum_array::create(y30bytes, fn_bytes, fn_bytes);
+        y21in = fixnum_array::create(y31bytes, fn_bytes, fn_bytes);
+        z20in = fixnum_array::create(z30bytes, fn_bytes, fn_bytes);
+        z21in = fixnum_array::create(z31bytes, fn_bytes, fn_bytes);
+        fixnum_array::template map<mnt4g2_pq_plus>(modulus4, rx30, rx31, ry30, ry31, rz30, rz31, x20in, x21in, y20in, y21in, z20in, z21in, rx30, rx31, ry30, ry31, rz30, rz31);
+        delete x20in;
+        delete x21in;
+        delete y20in;
+        delete y21in;
+        delete z20in;
+        delete z21in;
 #endif
         delete x10in;
         delete x11in;
@@ -728,31 +882,7 @@ int do_calc_np_sigma_mnt4_g2(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t*
     delete modulus_bytes;
 
     printf("mnt4_g2 final result");
-    printf("\nx3:");
-    for (int k = fn_bytes-1; k >= 0; k--) {
-        printf("%02x", x30[k]);
-    }
-    printf(",");
-    for (int k = fn_bytes-1; k >= 0; k--) {
-        printf("%02x", x31[k]);
-    }
-    printf("\ny3:");
-    for (int k = fn_bytes-1; k >= 0; k--) {
-        printf("%02x", y30[k]);
-    }
-    printf(",");
-    for (int k = fn_bytes-1; k >= 0; k--) {
-        printf("%02x", y31[k]);
-    }
-    printf("\nz3:");
-    for (int k = fn_bytes-1; k >= 0; k--) {
-       printf("%02x", z30[k]);
-    }
-    printf(",");
-    for (int k = fn_bytes-1; k >= 0; k--) {
-       printf("%02x", z31[k]);
-    }
-    printf("\n");
+    print_g2(x30, x31, y30, y31, z30, z31);
     clock_t diff = clock() - start;
     printf("cost time %ld\n", diff);
     return 0;
