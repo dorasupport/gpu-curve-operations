@@ -286,7 +286,12 @@ G multiexpG1(typename std::vector<Fr>::const_iterator scalar_start,
     delete z_val;
     delete scalar_val;
     delete val;
-    return acc;
+    typedef bigint<mnt4753_q_limbs> bigint_xyz;
+    mnt4753_Fq bigint_x = bigint_xyz(x3[0]);
+    mnt4753_Fq bigint_y = bigint_xyz(y3[0]);
+    mnt4753_Fq bigint_z = bigint_xyz(z3[0]);
+    G result = G(bigint_x, bigint_y, bigint_z);
+    return result;
 }
 
 template<typename G, typename Fr>
@@ -359,7 +364,12 @@ G multiexpG2(typename std::vector<Fr>::const_iterator scalar_start,
     delete z0_val;
     delete z1_val;
     delete val;
-    return acc;
+    typedef bigint<mnt4753_q_limbs> bigint_xyz;
+    mnt4753_Fq2 bigint_x = mnt4753_Fq2(bigint_xyz(x30[0]), bigint_xyz(x31[0]));
+    mnt4753_Fq2 bigint_y = mnt4753_Fq2(bigint_xyz(y30[0]), bigint_xyz(y31[0]));
+    mnt4753_Fq2 bigint_z = mnt4753_Fq2(bigint_xyz(z30[0]), bigint_xyz(z31[0]));
+    G result = G(bigint_x, bigint_y, bigint_z);
+    return result;
 }
 
 template<typename ppT>
