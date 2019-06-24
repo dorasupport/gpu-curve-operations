@@ -23,10 +23,10 @@
 using namespace libff;
 using namespace libsnark;
 
-#define GPU_CALC
+//#define GPU_CALC
 //const multi_exp_method method = multi_exp_method_BDLO12;
-//const multi_exp_method method = multi_exp_method_bos_coster;
-const multi_exp_method method = multi_exp_method_naive_plain;
+const multi_exp_method method = multi_exp_method_bos_coster;
+//const multi_exp_method method = multi_exp_method_naive_plain;
 
 template<typename ppT>
 class groth16_parameters {
@@ -363,7 +363,7 @@ G multiexpG2(typename std::vector<Fr>::const_iterator scalar_start,
 }
 
 template<typename ppT>
-void mnt4g1_prove(
+int mnt4g1_prove(
     const char* params_path,
     const char* input_path,
     const char* output_path)
@@ -425,6 +425,7 @@ void mnt4g1_prove(
 
     clock_t diff = clock() - start;
     printf("GPU all cost %lld\n", diff);
+    return 0;
 }
 
 int main(int argc, const char * argv[])
@@ -437,23 +438,32 @@ int main(int argc, const char * argv[])
   setbuf(stdout, NULL);
   std::string curve(argv[1]);
   std::string mode(argv[2]);
+  std::string device(argv[3]);
 
-  const char* params_path = argv[3];
-  const char* input_path = argv[4];
-  const char* output_path = argv[5];
+  const char* params_path = argv[4];
+  const char* input_path = argv[5];
+  const char* output_path = argv[6];
 
-  if (curve == "MNT4753") {
-#ifdef GPU_CALC
-    mnt4g1_prove<mnt4753_pp>(params_path, input_path, output_path);
-#else
-    if (mode == "compute") {
-      return run_prover<mnt4753_pp>(params_path, input_path, output_path);
+  if (device == "GPU") {
+    if (curve == "MNT4753") {
+      if (mode == "compute") {
+        return mnt4g1_prove<mnt4753_pp>(params_path, input_path, output_path);
+      }
+    } else if (curve == "MNT6753") {
+      if (mode == "compute") {
+        return run_prover<mnt6753_pp>(params_path, input_path, output_path);
+      }
+    } 
+  } else if (device == "CPU") {
+    if (curve == "MNT4753") {
+        return run_prover<mnt4753_pp>(params_path, input_path, output_path);
+    } else if (curve == "MNT6753") {
+      if (mode == "compute") {
+        return run_prover<mnt6753_pp>(params_path, input_path, output_path);
+      }
     }
-#endif
-  } else if (curve == "MNT6753") {
-    if (mode == "compute") {
-      return run_prover<mnt6753_pp>(params_path, input_path, output_path);
-    }
+  } else {
+    fprintf(stderr, "device code isn't part of this reference!");
   }
 }
 
