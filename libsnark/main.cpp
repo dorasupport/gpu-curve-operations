@@ -577,32 +577,30 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
     typename std::vector<G>::const_iterator vec_it;
     typename std::vector<Fr>::const_iterator scalar_it;
     G acc = G::zero();
-#if 0
     int size = length;//vec_end - vec_start;
     int esize = 96;
     int total_size = size*esize;
-    uint8_t *x0_val = new uint8_t[total_size];
-    uint8_t *x1_val = new uint8_t[total_size];
-    uint8_t *y0_val = new uint8_t[total_size];
-    uint8_t *y1_val = new uint8_t[total_size];
-    uint8_t *z0_val = new uint8_t[total_size];
-    uint8_t *z1_val = new uint8_t[total_size];
+    uint8_t *x_val = new uint8_t[3*total_size];
+    uint8_t *y_val = new uint8_t[3*total_size];
+    uint8_t *z_val = new uint8_t[3*total_size];
+    uint8_t *x0_val = x_val;
+    uint8_t *x1_val = x_val + total_size;
+    uint8_t *x2_val = x_val + 2*total_size;
+    uint8_t *y0_val = y_val;
+    uint8_t *y1_val = y_val + total_size;
+    uint8_t *y2_val = y_val + 2*total_size;
+    uint8_t *z0_val = z_val;
+    uint8_t *z1_val = z_val + total_size;
+    uint8_t *z2_val = z_val + 2*total_size;
     uint8_t *scalar_val = new uint8_t[total_size];
-    memset(x0_val, 0x0, total_size);
-    memset(x1_val, 0x0, total_size);
-    memset(y0_val, 0x0, total_size);
-    memset(y1_val, 0x0, total_size);
-    memset(z0_val, 0x0, total_size);
-    memset(z1_val, 0x0, total_size);
+    memset(x_val, 0x0, total_size);
+    memset(y_val, 0x0, total_size);
+    memset(z_val, 0x0, total_size);
     memset(scalar_val, 0x0, total_size);
-    uint8_t x30[esize];
-    uint8_t x31[esize];
-    uint8_t y30[esize];
-    uint8_t y31[esize];
-    uint8_t z30[esize];
-    uint8_t z31[esize];
+    uint8_t x3[3*esize];
+    uint8_t y3[3*esize];
+    uint8_t z3[3*size];
     uint8_t *val = new uint8_t[esize];
-
     int i = 0;
     for (vec_it = vec_start, scalar_it = scalar_start; vec_it != vec_end; ++vec_it, ++scalar_it)
     {
@@ -613,11 +611,17 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
         ((*vec_it).X()).c1.mont_repr.as_bytes(val);
         memcpy(x1_val + i*esize, val, esize);
         memset(val, 0x0, esize);
+        ((*vec_it).X()).c2.mont_repr.as_bytes(val);
+        memcpy(x2_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
         ((*vec_it).Y()).c0.mont_repr.as_bytes(val);
         memcpy(y0_val + i*esize, val, esize);
         memset(val, 0x0, esize);
         ((*vec_it).Y()).c1.mont_repr.as_bytes(val);
         memcpy(y1_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
+        ((*vec_it).Y()).c2.mont_repr.as_bytes(val);
+        memcpy(y2_val + i*esize, val, esize);
         memset(val, 0x0, esize);
         ((*vec_it).Z()).c0.mont_repr.as_bytes(val);
         memcpy(z0_val + i*esize, val, esize);
@@ -625,45 +629,52 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
         ((*vec_it).Z()).c1.mont_repr.as_bytes(val);
         memcpy(z1_val + i*esize, val, esize);
         memset(val, 0x0, esize);
+        ((*vec_it).Z()).c2.mont_repr.as_bytes(val);
+        memcpy(z2_val + i*esize, val, esize);
+        memset(val, 0x0, esize);
         (*scalar_it).as_bigint().as_bytes(val);
         memcpy(scalar_val + i*esize, val, esize);
         i ++;
     }
 
-    mnt6_g2_do_calc_np_sigma(size, scalar_val, x0_val, y0_val, z0_val, x30, y30, z30);
-    delete x0_val;
-    delete x1_val;
-    delete y0_val;
-    delete y1_val;
-    delete z0_val;
-    delete z1_val;
+    mnt6_g2_do_calc_np_sigma(size, scalar_val, x_val, y_val, z_val, x3, y3, z3);
+    delete x_val;
+    delete y_val;
+    delete z_val;
     delete val;
-    bigint<mnt4753_q_limbs> bigint_x0, bigint_x1, bigint_y0, bigint_y1, bigint_z0, bigint_z1;
-    setBigData(&bigint_x0, x30, esize);
-    setBigData(&bigint_x1, x31, esize);
-    setBigData(&bigint_y0, y30, esize);
-    setBigData(&bigint_y1, y31, esize);
-    setBigData(&bigint_z0, z30, esize);
-    setBigData(&bigint_z1, z31, esize);
+    bigint<mnt4753_q_limbs> bigint_x0, bigint_x1, bigint_x2, bigint_y0, bigint_y1, bigint_y2, bigint_z0, bigint_z1, bigint_z2;
+    setBigData(&bigint_x0, x3, esize);
+    setBigData(&bigint_x1, x3+esize, esize);
+    setBigData(&bigint_x2, x3+2*esize, esize);
+    setBigData(&bigint_y0, y3, esize);
+    setBigData(&bigint_y1, y3+esize, esize);
+    setBigData(&bigint_y2, y3+2*esize, esize);
+    setBigData(&bigint_z0, z3, esize);
+    setBigData(&bigint_z1, z3+esize, esize);
+    setBigData(&bigint_z2, z3+2*esize, esize);
     bigint_x0.print_hex();
     bigint_x1.print_hex();
+    bigint_x2.print_hex();
     bigint_y0.print_hex();
     bigint_y1.print_hex();
+    bigint_y2.print_hex();
     bigint_z0.print_hex();
     bigint_z1.print_hex();
-    mnt4753_Fq2 bigint_x = mnt4753_Fq2(bigint_x0, bigint_x1);
-    mnt4753_Fq2 bigint_y = mnt4753_Fq2(bigint_y0, bigint_y1);
-    mnt4753_Fq2 bigint_z = mnt4753_Fq2(bigint_z0, bigint_z1);
+    bigint_z2.print_hex();
+    mnt6753_Fq3 bigint_x = mnt6753_Fq3(bigint_x0, bigint_x1, bigint_x2);
+    mnt6753_Fq3 bigint_y = mnt6753_Fq3(bigint_y0, bigint_y1, bigint_y2);
+    mnt6753_Fq3 bigint_z = mnt6753_Fq3(bigint_z0, bigint_z1, bigint_z2);
     G result = G(bigint_x, bigint_y, bigint_z);
     result.X().c0.mont_repr.print_hex();
     result.X().c1.mont_repr.print_hex();
+    result.X().c2.mont_repr.print_hex();
     result.Y().c0.mont_repr.print_hex();
     result.Y().c1.mont_repr.print_hex();
+    result.Y().c2.mont_repr.print_hex();
     result.Z().c0.mont_repr.print_hex();
     result.Z().c1.mont_repr.print_hex();
+    result.Z().c2.mont_repr.print_hex();
     return result;
-#endif
-    return acc;
 }
 
 template<typename ppT>
@@ -701,16 +712,16 @@ int mnt6_prove(
     G1<ppT> evaluation_At = multiexp6G1<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
 
-    G1<ppT> evaluation_Bt1 = multiexpG1<G1<ppT>, Fr<ppT>>(
+    G1<ppT> evaluation_Bt1 = multiexp6G1<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
 
     G2<ppT> evaluation_Bt2 = multiexp6G2<G2<ppT>, Fr<ppT>>(
         w.begin(), parameters.B2.begin(), parameters.m + 1);
 
-    G1<ppT> evaluation_Ht = multiexpG1<G1<ppT>, Fr<ppT>>(
+    G1<ppT> evaluation_Ht = multiexp6G1<G1<ppT>, Fr<ppT>>(
         coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
 
-    G1<ppT> evaluation_Lt = multiexpG1<G1<ppT>, Fr<ppT>>(
+    G1<ppT> evaluation_Lt = multiexp6G1<G1<ppT>, Fr<ppT>>(
         w.begin() + primary_input_size + 1,
         parameters.L.begin(),
         parameters.m - 1);
