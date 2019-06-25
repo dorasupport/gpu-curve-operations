@@ -337,7 +337,9 @@ inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, ui
     delete modulus_bytes;
 }
 
-int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+
+template <template <typename> class Calc_np, template <typename> class PQ_plus>
+int do_calc_np_sigma(int nelts, uint8_t* modulus_q, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
     clock_t start = clock();
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
@@ -356,29 +358,11 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
     uint8_t *z3bytes = new uint8_t[step_bytes];
     fixnum_array *dx3, *dy3, *dz3, *x1in, *y1in, *z1in;
     fixnum_array *x2in, *y2in, *z2in;
-    uint8_t *modulus_bytes = new uint8_t[step_bytes];
-    // mnt4 q
-    memset(modulus_bytes, 0x0, step_bytes);
-    for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, mnt4_modulus, fn_bytes);
-    }
-    auto modulus4 = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
 
-    // mnt6 q
-    memset(modulus_bytes, 0x0, step_bytes);
-    for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, mnt6_modulus, fn_bytes);
-    }
-    auto modulus6 = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
-
-    // mnt4 a
-    memset(modulus_bytes, 0x0, step_bytes);
-    for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, mnt4_a, fn_bytes);
-    }
-    auto mnt4a = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
-
+    auto modulusq = fixnum_array::create(modulus_q, step_bytes, fn_bytes);
     // scaler
+    uint8_t *modulus_bytes = new uint8_t[step_bytes];
+    memset(modulus_bytes, 0x0, step_bytes);
     auto modulusw = fixnum_array::create(scalar, step_bytes, fn_bytes);
     
     // sigma result
@@ -392,7 +376,7 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
         x1in = fixnum_array::create(x1bytes, step_bytes, fn_bytes);
         y1in = fixnum_array::create(y1bytes, step_bytes, fn_bytes);
         z1in = fixnum_array::create(z1bytes, step_bytes, fn_bytes);
-        fixnum_array::template map<mnt4g1_calc_np>(modulus4, modulusw, x1in, y1in, z1in, dx3, dy3, dz3);
+        fixnum_array::template map<Calc_np>(modulusq, modulusw, x1in, y1in, z1in, dx3, dy3, dz3);
 
         dx3->retrieve_all(x3bytes, step_bytes, &size);
         dy3->retrieve_all(y3bytes, step_bytes, &size);
@@ -431,7 +415,7 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
             rx3 = fixnum_array::create(x3bytes + fn_bytes, fn_bytes, fn_bytes);
             ry3 = fixnum_array::create(y3bytes + fn_bytes, fn_bytes, fn_bytes);
             rz3 = fixnum_array::create(z3bytes + fn_bytes, fn_bytes, fn_bytes);
-            fixnum_array::template map<mnt4g1_pq_plus>(modulus4, x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
+            fixnum_array::template map<PQ_plus>(modulusq, x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
             delete x2in;
             delete y2in;
             delete z2in;
@@ -460,7 +444,7 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
             x2in = fixnum_array::create(x3bytes + k * fn_bytes, fn_bytes, fn_bytes);
             y2in = fixnum_array::create(y3bytes + k * fn_bytes, fn_bytes, fn_bytes);
             z2in = fixnum_array::create(z3bytes + k * fn_bytes, fn_bytes, fn_bytes);
-            fixnum_array::template map<mnt4g1_pq_plus>(modulus4, rx3, ry3, rz3, x2in, y2in, z2in, rx3, ry3, rz3);
+            fixnum_array::template map<PQ_plus>(modulusq, rx3, ry3, rz3, x2in, y2in, z2in, rx3, ry3, rz3);
             delete x2in;
             delete y2in;
             delete z2in;
@@ -469,7 +453,7 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
         x2in = fixnum_array::create(x3bytes, fn_bytes, fn_bytes);
         y2in = fixnum_array::create(y3bytes, fn_bytes, fn_bytes);
         z2in = fixnum_array::create(z3bytes, fn_bytes, fn_bytes);
-        fixnum_array::template map<mnt4g1_pq_plus>(modulus4, x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
+        fixnum_array::template map<PQ_plus>(modulusq, x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
         delete x2in;
         delete y2in;
         delete z2in;
@@ -511,6 +495,36 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
     printf("\n");
     clock_t diff = clock() - start;
     printf("cost time %ld\n", diff);
+    return 0;
+}
+
+int mnt4_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+    int step = n;
+    int fn_bytes = 96;
+    int step_bytes = fn_bytes * step;
+    uint8_t *modulus_bytes = new uint8_t[step_bytes];
+    // mnt4 q
+    memset(modulus_bytes, 0x0, step_bytes);
+    for(int i = 0; i < step; i++) {
+        memcpy(modulus_bytes + i*fn_bytes, mnt4_modulus, fn_bytes);
+    }
+    do_calc_np_sigma<mnt4g1_calc_np, mnt4g1_pq_plus>(n, modulus_bytes, scalar, x1, y1, z1, x3, y3, z3);
+    delete modulus_bytes;
+    return 0;
+}
+
+int mnt6_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+    int step = n;
+    int fn_bytes = 96;
+    int step_bytes = fn_bytes * step;
+    uint8_t *modulus_bytes = new uint8_t[step_bytes];
+    // mnt6 q
+    memset(modulus_bytes, 0x0, step_bytes);
+    for(int i = 0; i < step; i++) {
+        memcpy(modulus_bytes + i*fn_bytes, mnt6_modulus, fn_bytes);
+    }
+    do_calc_np_sigma<mnt6g1_calc_np, mnt6g1_pq_plus>(n, modulus_bytes, scalar, x1, y1, z1, x3, y3, z3);
+    delete modulus_bytes;
     return 0;
 }
 
@@ -607,7 +621,7 @@ void print_g2(uint8_t *x30, uint8_t *x31, uint8_t *y30, uint8_t *y31, uint8_t *z
 
 }
 
-int do_calc_np_sigma_mnt4_g2(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t* x11, uint8_t* y10, uint8_t* y11, uint8_t* z10, uint8_t* z11, uint8_t *x30, uint8_t *x31, uint8_t *y30, uint8_t *y31, uint8_t *z30, uint8_t *z31) {
+int mnt4_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t* x11, uint8_t* y10, uint8_t* y11, uint8_t* z10, uint8_t* z11, uint8_t *x30, uint8_t *x31, uint8_t *y30, uint8_t *y31, uint8_t *z30, uint8_t *z31) {
     clock_t start = clock();
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
