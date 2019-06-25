@@ -13,6 +13,7 @@
 #include <libsnark/knowledge_commitment/kc_multiexp.hpp>
 #include <libsnark/knowledge_commitment/knowledge_commitment.hpp>
 #include <libsnark/reductions/r1cs_to_qap/r1cs_to_qap.hpp>
+#include <time.h>
 
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
 
@@ -179,7 +180,8 @@ int run_prover(
     const char* input_path,
     const char* output_path)
 {
-    clock_t start = clock();
+    time_t start_time, finish_time;
+    time(&start_time);
     ppT::init_public_params();
 
     const size_t primary_input_size = 1;
@@ -256,8 +258,9 @@ int run_prover(
 
     output.write(output_path);
 
-    clock_t diff = clock() - start;
-    printf("CPU all cost %lld\n", diff);
+    time(&finish_time);
+    int duration = finish_time - start_time;
+    printf("CPU all cost %d seconds\n", duration);
     return 0;
 }
 
@@ -440,7 +443,8 @@ int mnt4g1_prove(
     const char* input_path,
     const char* output_path)
 {
-    clock_t start = clock();
+    time_t start_time, finish_time;
+    time(&start_time);
     ppT::init_public_params();
 
     const size_t primary_input_size = 1;
@@ -495,8 +499,9 @@ int mnt4g1_prove(
 
     output.write(output_path);
 
-    clock_t diff = clock() - start;
-    printf("GPU all cost %lld\n", diff);
+    time(&finish_time);
+    int duration = finish_time - start_time;
+    printf("GPU all cost %d seconds\n", duration);
     return 0;
 }
 
