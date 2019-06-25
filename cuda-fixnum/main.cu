@@ -249,6 +249,52 @@ struct mnt6g2_calc_np {
   }
 };
 
+
+int mnt4_g1_pq_plus(int n, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t* x2, uint8_t* y2, uint8_t* z2, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+    typedef warp_fixnum<96, u32_fixnum> fixnum;
+    typedef fixnum_array<fixnum> fixnum_array;
+    fixnum_array *x1in, *y1in, *z1in, *x2in, *y2in, *z2in;
+    fixnum_array *rx3, *ry3, *rz3;
+    int fn_bytes = 96;
+    int step_bytes = n * fn_bytes;
+    uint8_t *modulus_bytes = new uint8_t[step_bytes];
+    // mnt4 q
+    for(int i = 0; i < n; i++) {
+        memcpy(modulus_bytes + i*MNT_SIZE, mnt4_modulus, MNT_SIZE);
+    }
+    auto modulus4 = fixnum_array::create(modulus_bytes, step_bytes, MNT_SIZE);
+    
+    x1in = fixnum_array::create(x1, step_bytes, fn_bytes);
+    y1in = fixnum_array::create(y1, step_bytes, fn_bytes);
+    z1in = fixnum_array::create(z1, step_bytes, fn_bytes);
+    x2in = fixnum_array::create(x2, step_bytes, fn_bytes);
+    y2in = fixnum_array::create(y2, step_bytes, fn_bytes);
+    z2in = fixnum_array::create(z2, step_bytes, fn_bytes);
+
+    rx3 = fixnum_array::create(n);
+    ry3 = fixnum_array::create(n);
+    rz3 = fixnum_array::create(n);
+    fixnum_array::template map<mnt4g1_pq_plus>(modulus4, x1in, y1in, z1in, x2in, y2in, z2in, rx3, ry3, rz3);
+
+    int size = n; 
+    rx3->retrieve_all(x3, step_bytes, &size);
+    ry3->retrieve_all(y3, step_bytes, &size);
+    rz3->retrieve_all(z3, step_bytes, &size);
+   
+    delete x1in; 
+    delete y1in; 
+    delete z1in; 
+    delete x2in; 
+    delete y2in; 
+    delete z2in; 
+    delete rx3;
+    delete ry3;
+    delete rz3;
+    delete modulus4;
+    delete modulus_bytes;
+    return 0;
+}
+
 inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *rx, uint8_t *ry, uint8_t *rz) {
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
