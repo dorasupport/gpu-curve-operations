@@ -38,3 +38,9 @@ tests/paillier_*
 # Debug files
 *.dSYM/
 *.class
+
+# Make files
+Makefile
+cmake_install.cmake
+CMakeCache.txt
+CMakeFiles
