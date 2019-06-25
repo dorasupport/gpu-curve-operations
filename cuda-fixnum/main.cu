@@ -302,9 +302,6 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
     int DATA_SIZE = 96;
     int fn_bytes = DATA_SIZE;
     int step_bytes = fn_bytes * step;
-    //uint8_t *x1bytes = new uint8_t[step_bytes];
-    //uint8_t *y1bytes = new uint8_t[step_bytes];
-    //uint8_t *z1bytes = new uint8_t[step_bytes];
     uint8_t *x1bytes = x1;
     uint8_t *y1bytes = y1;
     uint8_t *z1bytes = z1;
@@ -336,12 +333,6 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
     auto mnt4a = fixnum_array::create(modulus_bytes, step_bytes, fn_bytes);
 
     // scaler
-#if 0
-    memset(modulus_bytes, 0x0, step_bytes);
-    for(int i = 0; i < step; i++) {
-        memcpy(modulus_bytes + i*fn_bytes, scalar[i], fn_bytes);
-    }
-#endif
     auto modulusw = fixnum_array::create(scalar, step_bytes, fn_bytes);
     
     // sigma result
@@ -349,13 +340,6 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
     int got_result = false;
 
     for (int i = 0; i < nelts; i+=step) {
-#if 0
-        for (int j = 0; j < step; j++) {
-            memcpy(x1bytes + j*fn_bytes, x1[i+j], fn_bytes);
-            memcpy(y1bytes + j*fn_bytes, y1[i+j], fn_bytes);
-            memcpy(z1bytes + j*fn_bytes, z1[i+j], fn_bytes);
-        }
-#endif
         dx3 = fixnum_array::create(step);
         dy3 = fixnum_array::create(step);
         dz3 = fixnum_array::create(step);
@@ -460,11 +444,6 @@ int do_calc_np_sigma(int nelts, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8
         delete ry3;
         delete rz3;
     }
-#if 0
-    delete x1bytes;
-    delete y1bytes;
-    delete z1bytes;
-#endif
     delete x3bytes;
     delete y3bytes;
     delete z3bytes;
@@ -721,6 +700,18 @@ int do_calc_np_sigma_mnt4_g2(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t*
         dy31->retrieve_all(y31bytes, step_bytes, &size);
         dz30->retrieve_all(z30bytes, step_bytes, &size);
         dz31->retrieve_all(z31bytes, step_bytes, &size);
+        delete x10in;
+        delete x11in;
+        delete y10in;
+        delete y11in;
+        delete z10in;
+        delete z11in;
+        delete dx30;
+        delete dx31;
+        delete dy30;
+        delete dy31;
+        delete dz30;
+        delete dz31;
 #ifdef PARALLEL_SIGMA
         int start = nelts%2;
         int rnelts = nelts - start;
@@ -845,18 +836,6 @@ int do_calc_np_sigma_mnt4_g2(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t*
         delete z20in;
         delete z21in;
 #endif
-        delete x10in;
-        delete x11in;
-        delete y10in;
-        delete y11in;
-        delete z10in;
-        delete z11in;
-        delete dx30;
-        delete dx31;
-        delete dy30;
-        delete dy31;
-        delete dz30;
-        delete dz31;
     }
     if (!got_result) {
         size = 1;
