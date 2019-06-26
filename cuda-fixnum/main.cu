@@ -232,10 +232,17 @@ struct mnt6g2_calc_np {
     int i = 24*32 - 1;
     bool found_one = false;
     int count = 0;
+#if 0
+    dump(w, 24);
+    dump(x10, 24);
+    dump(y10, 24);
+    dump(z10, 24);
+#endif
     while(i >= 0) {
         size_t value = fixnum::get(tempw, i/32);
+        //printf("value[%d] is %x\n", i, value);
         if (found_one) {
-            mnt6g2::p_double(mod, x10, x11, x12, y10, y11, y12, z10, z11, z12, x30, x31, x32, y30, y31, y32, z30, z31, z32);
+            mnt6g2::p_double(mod, x30, x31, x32, y30, y31, y32, z30, z31, z32, x30, x31, x32, y30, y31, y32, z30, z31, z32);
         }
         if ((value)&(1<<i%32)) {
             if (found_one == false) {
@@ -255,6 +262,7 @@ struct mnt6g2_calc_np {
         }
         i --;
         count ++;
+        //if (count >= 25) break;
     }
   }
 };
@@ -1062,15 +1070,12 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
     typedef fixnum_array<fixnum> fixnum_array;
     printf("mnt6_g2_do_calc_np_sigma start nelts %d\n", nelts);
     // test
+    int sn = 0;
+    int skip = 1;
 #if 0
+    skip = nelts; 
     nelts = 1;
-    int sn = 96;
-    x10 += sn;
-    x11 += sn;
-    y10 += sn;
-    y11 += sn;
-    z10 += sn;
-    z11 += sn;
+    sn = 96;
     scalar += sn;
 #endif
     int step = nelts;
@@ -1078,15 +1083,15 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
     int DATA_SIZE = 96;
     int fn_bytes = DATA_SIZE;
     int step_bytes = fn_bytes * step;
-    uint8_t *x10bytes = x;
-    uint8_t *x11bytes = x + step_bytes;
-    uint8_t *x12bytes = x + 2 * step_bytes;
-    uint8_t *y10bytes = y;
-    uint8_t *y11bytes = y + step_bytes;
-    uint8_t *y12bytes = y + 2 * step_bytes;
-    uint8_t *z10bytes = z;
-    uint8_t *z11bytes = z + step_bytes;
-    uint8_t *z12bytes = z + 2 * step_bytes;
+    uint8_t *x10bytes = x + sn;
+    uint8_t *x11bytes = x + skip*step_bytes + sn;
+    uint8_t *x12bytes = x + 2 * skip*step_bytes + sn;
+    uint8_t *y10bytes = y + sn;
+    uint8_t *y11bytes = y + skip*step_bytes + sn;
+    uint8_t *y12bytes = y + 2 * skip*step_bytes + sn;
+    uint8_t *z10bytes = z + sn;
+    uint8_t *z11bytes = z + skip*step_bytes + sn;
+    uint8_t *z12bytes = z + 2 * skip*step_bytes + sn;
     uint8_t *x30bytes = new uint8_t[step_bytes];
     uint8_t *x31bytes = new uint8_t[step_bytes];
     uint8_t *x32bytes = new uint8_t[step_bytes];
@@ -1113,8 +1118,9 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
     fixnum_array *rx30, *rx31, *rx32, *ry30, *ry31, *ry32, *rz30, *rz31, *rz32;
     int got_result = false;
 
-#if 0
-    printf("x10:\n");
+#if 1
+    printf("input:\n");
+    printf("x10:");
     for (int i = 0; i < step_bytes; i ++) {
         printf("%02x", x10bytes[i]); 
         if ((i+1) % 96 == 0) {
@@ -1124,6 +1130,13 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
     printf("\nx11:");
     for (int i = 0; i < step_bytes; i ++) {
         printf("%02x", x11bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\nx12:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", x12bytes[i]); 
         if ((i+1) % 96 == 0) {
             printf("\t");
         }
@@ -1142,6 +1155,13 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
             printf("\t");
         }
     }
+    printf("\ny12:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", y12bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
     printf("\nz10:");
     for (int i = 0; i < step_bytes; i ++) {
         printf("%02x", z10bytes[i]); 
@@ -1152,6 +1172,13 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
     printf("\nz11:");
     for (int i = 0; i < step_bytes; i ++) {
         printf("%02x", z11bytes[i]); 
+        if ((i+1) % 96 == 0) {
+            printf("\t");
+        }
+    }
+    printf("\nz12:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%02x", z12bytes[i]); 
         if ((i+1) % 96 == 0) {
             printf("\t");
         }
@@ -1184,6 +1211,16 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
         z10in = fixnum_array::create(z10bytes, step_bytes, fn_bytes);
         z11in = fixnum_array::create(z11bytes, step_bytes, fn_bytes);
         z12in = fixnum_array::create(z12bytes, step_bytes, fn_bytes);
+        fixnum_array::template map<mnt6g2_calc_np>(modulus6, modulusw, x10in, x11in, x12in, y10in, y11in, y12in, z10in, z11in, z12in, dx30, dx31, dx32, dy30, dy31, dy32, dz30, dz31, dz32);
+
+        dx30->retrieve_all(x30bytes, step_bytes, &size);
+        dx31->retrieve_all(x31bytes, step_bytes, &size);
+        dx32->retrieve_all(x32bytes, step_bytes, &size);
+        dy30->retrieve_all(y30bytes, step_bytes, &size);
+        dy31->retrieve_all(y31bytes, step_bytes, &size);
+        dy32->retrieve_all(y32bytes, step_bytes, &size);
+        dz30->retrieve_all(z30bytes, step_bytes, &size);
+        dz31->retrieve_all(z31bytes, step_bytes, &size);
         dz32->retrieve_all(z32bytes, step_bytes, &size);
         delete x10in;
         delete x11in;
@@ -1203,6 +1240,55 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
         delete dz30;
         delete dz31;
         delete dz32;
+#if 1
+        printf("calc np result\n");
+        printf("x30:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", x30bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\nx31:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", x31bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\nx32:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", x32bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\ny30:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", y30bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\ny31:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", y31bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\ny32:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", y32bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\nz30:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", z30bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\nz31:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", z31bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\nz32:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", z32bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\n");
+#endif
 #ifdef PARALLEL_SIGMA
         int start = nelts%2;
         int rnelts = nelts - start;

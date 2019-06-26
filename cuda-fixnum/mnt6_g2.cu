@@ -50,18 +50,18 @@ static __device__ void fp3_multi(fixnum mod, fixnum a, fixnum b, fixnum c, fixnu
     m.sub(r10, r10, cC);
 
     fixnum temp = r10;
+    fixnum temp1;
     for (int i = 0; i < 10; i++) {
-        m.add(r10, temp, r10);
-        temp = r10;
+        m.add(temp1, temp, r10);
+        temp = temp1;
     } 
-    m.add(r10, aA, r10);
+    m.add(r10, aA, temp1);
 
     // (a+b)*(A+B)-aA-bB+non_residue*cC
     m.mul(r11, apb, ApB);
     m.sub(r11, r11, aA);
     m.sub(r11, r11, bB);
     temp = cC;
-    fixnum temp1;
     for (int i = 0; i < 10; i++) {
         m.add(temp1, temp, cC);
         temp = temp1;
@@ -149,21 +149,15 @@ static __device__ void fp3_square(fixnum mod, fixnum a, fixnum b, fixnum c, fixn
 
 static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum x12, fixnum y10, fixnum y11, fixnum y12, fixnum z10, fixnum z11, fixnum z12, fixnum x20, fixnum x21, fixnum x22, fixnum y20, fixnum y21, fixnum y22, fixnum z20, fixnum z21, fixnum z22, fixnum &x30, fixnum &x31, fixnum &x32, fixnum &y30, fixnum &y31, fixnum &y32, fixnum &z30, fixnum &z31, fixnum &z32) {
 #if 0
-    printf("4g2 pq_plus\n");
+    printf("6g2 pq_plus\n");
     printf("x1, y1, z1\n");
     dump(x10, 24);
-    dump(x11, 24);
     dump(y10, 24);
-    dump(y11, 24);
     dump(z10, 24);
-    dump(z11, 24);
     printf("x2, y2, z2\n");
     dump(x20, 24);
-    dump(x21, 24);
     dump(y20, 24);
-    dump(y21, 24);
     dump(z20, 24);
-    dump(z21, 24);
 #endif
     if (fixnum::is_zero(x10) && fixnum::is_zero(x11) && fixnum::is_zero(x12) && fixnum::is_zero(z10) && fixnum::is_zero(z11) && fixnum::is_zero(z12)) {
         //printf("this zero\n");
@@ -216,7 +210,7 @@ static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum x12, f
 
     // u    = Y2Z1-Y1Z2
     fixnum u0, u1, u2;
-    fp3_sub(mod, y2z10, y2z11, y2z12, y1z20, y1z22, y1z22, u0, u1, u2);
+    fp3_sub(mod, y2z10, y2z11, y2z12, y1z20, y1z21, y1z22, u0, u1, u2);
 
     // uu   = u^2
     fixnum uu0, uu1, uu2;
@@ -241,9 +235,9 @@ static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum x12, f
     // A    = uu*Z1Z2 - vvv - 2*R
     fixnum A0, A1, A2;
     fp3_multi(mod, uu0, uu1, uu2, z1z20, z1z21, z1z22, A0, A1, A2);
-    fp3_sub(mod, A0, A1, A2, vvv0, vvv1, vvv2, A0, A1, A2);
-    fp3_sub(mod, A0, A1, A2, R0, R1, R2, A0, A1, A2);
-    fp3_sub(mod, A0, A1, A2, R0, R1, R2, A0, A1, A2);
+    fp3_add(mod, vvv0, vvv1, vvv2, R0, R1, R2, temp0, temp1, temp2);
+    fp3_add(mod, temp0, temp1, temp2, R0, R1, R2, temp0, temp1, temp2);
+    fp3_sub(mod, A0, A1, A2, temp0, temp1, temp2, A0, A1, A2);
 
     // X3   = v*A
     fp3_multi(mod, v0, v1, v2, A0, A1, A2, x30, x31, x32);
@@ -303,14 +297,11 @@ static __device__ void multi_by_a(fixnum mod, fixnum in0, fixnum in1, fixnum in2
 
 static __device__ void p_double(fixnum mod, fixnum x10, fixnum x11, fixnum x12, fixnum y10, fixnum y11, fixnum y12, fixnum z10, fixnum z11, fixnum z12, fixnum &x30, fixnum &x31, fixnum &x32, fixnum &y30, fixnum &y31, fixnum &y32, fixnum &z30, fixnum &z31, fixnum &z32) {
 #if 0
-    printf("4g2 q double\n");
+    printf("6g2 q double\n");
     printf("x1, y1, z1\n");
     dump(x10, 24);
-    dump(x11, 24);
     dump(y10, 24);
-    dump(y11, 24);
     dump(z10, 24);
-    dump(z11, 24);
 #endif
     if (fixnum::is_zero(x10) && fixnum::is_zero(x11) && fixnum::is_zero(x12) && fixnum::is_zero(z10) && fixnum::is_zero(z11) && fixnum::is_zero(z12)) {
         //printf("this zero\n");
@@ -395,11 +386,8 @@ static __device__ void p_double(fixnum mod, fixnum x10, fixnum x11, fixnum x12, 
 #if 0
     printf("dbl x3, y3, z3:\n");
     dump(x30, 24);
-    dump(x31, 24);
     dump(y30, 24);
-    dump(y31, 24);
     dump(z30, 24);
-    dump(z31, 24);
 #endif
 }
 

@@ -211,6 +211,7 @@ int run_prover(
     evaluation_At.X().mont_repr.print_hex();
     evaluation_At.Y().mont_repr.print_hex();
     evaluation_At.Z().mont_repr.print_hex();
+
     G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
     printf("evaluation_Bt1t\n");
@@ -227,7 +228,6 @@ int run_prover(
     evaluation_Bt2.Y().c1.mont_repr.print_hex();
     evaluation_Bt2.Z().c0.mont_repr.print_hex();
     evaluation_Bt2.Z().c1.mont_repr.print_hex();
-
     G1<ppT> evaluation_Ht = multiexp<G1<ppT>, Fr<ppT>>(
         coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
     printf("evaluation_Ht\n");
@@ -553,7 +553,7 @@ G multiexp6G1(typename std::vector<Fr>::const_iterator scalar_start,
     delete z_val;
     delete scalar_val;
     delete val;
-    bigint<mnt4753_q_limbs> bigint_x, bigint_y, bigint_z;
+    bigint<mnt6753_q_limbs> bigint_x, bigint_y, bigint_z;
     setBigData(&bigint_x, x3, esize);
     setBigData(&bigint_y, y3, esize);
     setBigData(&bigint_z, z3, esize);
@@ -580,9 +580,13 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
     int size = length;//vec_end - vec_start;
     int esize = 96;
     int total_size = size*esize;
-    uint8_t *x_val = new uint8_t[3*total_size];
-    uint8_t *y_val = new uint8_t[3*total_size];
-    uint8_t *z_val = new uint8_t[3*total_size];
+    int thr_total_size = 3 * total_size;
+    uint8_t *x_val = new uint8_t[thr_total_size];
+    uint8_t *y_val = new uint8_t[thr_total_size];
+    uint8_t *z_val = new uint8_t[thr_total_size];
+    memset(x_val, 0x0, thr_total_size);
+    memset(y_val, 0x0, thr_total_size);
+    memset(z_val, 0x0, thr_total_size);
     uint8_t *x0_val = x_val;
     uint8_t *x1_val = x_val + total_size;
     uint8_t *x2_val = x_val + 2*total_size;
@@ -593,13 +597,10 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
     uint8_t *z1_val = z_val + total_size;
     uint8_t *z2_val = z_val + 2*total_size;
     uint8_t *scalar_val = new uint8_t[total_size];
-    memset(x_val, 0x0, total_size);
-    memset(y_val, 0x0, total_size);
-    memset(z_val, 0x0, total_size);
     memset(scalar_val, 0x0, total_size);
     uint8_t x3[3*esize];
     uint8_t y3[3*esize];
-    uint8_t z3[3*size];
+    uint8_t z3[3*esize];
     uint8_t *val = new uint8_t[esize];
     int i = 0;
     for (vec_it = vec_start, scalar_it = scalar_start; vec_it != vec_end; ++vec_it, ++scalar_it)
@@ -636,13 +637,32 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
         memcpy(scalar_val + i*esize, val, esize);
         i ++;
     }
+    printf("x input:");
+    for (int i = 0 ; i < thr_total_size; i ++) {
+        printf("%x", x_val[i]);
+        if ((i+1)%esize == 0)  printf("\t");
+        if ((i+1)%total_size == 0)  printf("\n");
+    }
+    printf("\ny input:");
+    for (int i = 0 ; i < thr_total_size; i ++) {
+        printf("%x", y_val[i]);
+        if ((i+1)%esize == 0)  printf("\t");
+        if ((i+1)%total_size == 0)  printf("\n");
+    }
+    printf("\nz input:");
+    for (int i = 0 ; i < thr_total_size; i ++) {
+        printf("%x", z_val[i]);
+        if ((i+1)%esize == 0)  printf("\t");
+        if ((i+1)%total_size == 0)  printf("\n");
+    }
+    printf("\n");
 
     mnt6_g2_do_calc_np_sigma(size, scalar_val, x_val, y_val, z_val, x3, y3, z3);
     delete x_val;
     delete y_val;
     delete z_val;
     delete val;
-    bigint<mnt4753_q_limbs> bigint_x0, bigint_x1, bigint_x2, bigint_y0, bigint_y1, bigint_y2, bigint_z0, bigint_z1, bigint_z2;
+    bigint<mnt6753_q_limbs> bigint_x0, bigint_x1, bigint_x2, bigint_y0, bigint_y1, bigint_y2, bigint_z0, bigint_z1, bigint_z2;
     setBigData(&bigint_x0, x3, esize);
     setBigData(&bigint_x1, x3+esize, esize);
     setBigData(&bigint_x2, x3+2*esize, esize);
@@ -711,7 +731,6 @@ int mnt6_prove(
 // Now the 5 multi-exponentiations
     G1<ppT> evaluation_At = multiexp6G1<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
-
     G1<ppT> evaluation_Bt1 = multiexp6G1<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
 
@@ -731,7 +750,6 @@ int mnt6_prove(
     libff::leave_block("Multi-exponentiations");
     libff::leave_block("Compute the proof");
     libff::leave_block("Call to r1cs_gg_ppzksnark_prover");
-
     groth16_output<ppT> output(
       std::move(evaluation_At),
       std::move(evaluation_Bt2),
