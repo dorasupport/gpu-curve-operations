@@ -19,15 +19,14 @@ using namespace MNT_G;
 int BLOCK_NUM = 4096;
 #define MNT_SIZE (96)
 #define PARALLEL_SIGMA
+#define MNT4 1
+#define MNT6 2
 
 // mnt4_q
 const uint8_t mnt4_modulus[MNT_SIZE] = {1,128,94,36,222,99,144,94,159,17,221,44,82,84,157,227,240,37,196,154,113,16,136,99,164,84,114,118,233,204,90,104,56,126,83,203,165,13,15,184,157,5,24,242,118,231,23,177,157,247,90,161,217,36,209,153,141,237,160,232,37,185,253,7,115,216,151,108,249,232,183,94,237,175,143,91,80,151,249,183,173,205,226,238,34,144,34,16,17,196,146,45,198,196,1,0};
 
 // mnt6_q
 uint8_t mnt6_modulus[MNT_SIZE] = {1,0,0,64,226,118,7,217,79,58,161,15,23,153,160,78,151,87,0,63,188,129,195,214,164,58,153,52,118,249,223,185,54,38,33,41,148,202,235,62,155,169,89,200,40,92,108,178,157,247,90,161,217,36,209,153,141,237,160,232,37,185,253,7,115,216,151,108,249,232,183,94,237,175,143,91,80,151,249,183,173,205,226,238,34,144,34,16,17,196,146,45,198,196,1,0};
-
-// mnt4 a, for calc 2p, not use now
-uint8_t mnt4_a[MNT_SIZE] = {0x84,0xde,0xb8,0xb3,0x57,0xd9,0x51,0x31,0xd,0x8d,0x6,0xb4,0x8c,0x63,0x9a,0x23,0x5d,0xae,0x28,0x9a,0x41,0xc9,0x87,0x2f,0x3,0x6c,0x11,0x8f,0x33,0x30,0xb1,0xf2,0xde,0x2e,0x11,0x42,0x28,0x39,0x4d,0xda,0xd1,0x3a,0x06,0x9e,0x15,0x9b,0x1e,0x3c,0xb2,0xa,0x67,0x26,0x6e,0x77,0x18,0x64,0xc4,0x14,0xe0,0xa5,0x05,0x86,0x16,0xb3,0x42,0x4c,0x19,0xfb,0x97,0x93,0xe9,0x80,0x18,0xd1,0xcb,0x70,0xb6,0xfd,0x48,0x1f,0x2a,0x43,0xf3,0x3f,0x66,0xbf,0x8a,0x2a,0x85,0xc4,0x91,0x3d,0x8f,0xf6};
 
 template< typename fixnum >
 __device__ void dump(fixnum n, int size) {
@@ -321,11 +320,18 @@ inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, ui
 
     int half_bytes = MNT_SIZE*nelts/2;
     uint8_t *modulus_bytes = new uint8_t[half_bytes];
-    // mnt4 q
-    for(int i = 0; i < nelts/2; i++) {
-        memcpy(modulus_bytes + i*MNT_SIZE, mnt4_modulus, MNT_SIZE);
+    if (type == MNT4) {
+        // mnt4 q
+        for(int i = 0; i < nelts/2; i++) {
+            memcpy(modulus_bytes + i*MNT_SIZE, mnt4_modulus, MNT_SIZE);
+        }
+    } else if (type == MNT6) {
+        // mnt6 q
+        for(int i = 0; i < nelts/2; i++) {
+            memcpy(modulus_bytes + i*MNT_SIZE, mnt6_modulus, MNT_SIZE);
+        }
     }
-    auto modulus4 = fixnum_array::create(modulus_bytes, half_bytes, MNT_SIZE);
+    auto modulus = fixnum_array::create(modulus_bytes, half_bytes, MNT_SIZE);
     x1in = fixnum_array::create(x, half_bytes, MNT_SIZE);
     y1in = fixnum_array::create(y, half_bytes, MNT_SIZE);
     z1in = fixnum_array::create(z, half_bytes, MNT_SIZE);
@@ -336,7 +342,7 @@ inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, ui
     rx3 = fixnum_array::create(nelts/2);
     ry3 = fixnum_array::create(nelts/2);
     rz3 = fixnum_array::create(nelts/2);
-    fixnum_array::template map<mnt4g1_pq_plus>(modulus4, x1in, y1in, z1in, x2in, y2in, z2in, rx3, ry3, rz3);
+    fixnum_array::template map<mnt4g1_pq_plus>(modulus, x1in, y1in, z1in, x2in, y2in, z2in, rx3, ry3, rz3);
     
     int size = nelts/2;
     rx3->retrieve_all(rx, half_bytes, &size);
@@ -351,7 +357,7 @@ inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, ui
     delete rx3;
     delete ry3;
     delete rz3;
-    delete modulus4;
+    delete modulus;
     delete modulus_bytes;
 }
 
@@ -440,7 +446,7 @@ inline void do_sigma(int nelts, int type, uint8_t *x0, uint8_t *x1, uint8_t *x2,
 }
 
 template <template <typename> class Calc_np, template <typename> class PQ_plus>
-int do_calc_np_sigma(int nelts, uint8_t* modulus_q, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+int do_calc_np_sigma(int nelts, int type, uint8_t* modulus_q, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
     clock_t start = clock();
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
@@ -522,6 +528,19 @@ int do_calc_np_sigma(int nelts, uint8_t* modulus_q, uint8_t* scalar, uint8_t* x1
         }
         printf("\n");
 #endif
+        if (nelts == 1) {
+            memcpy(x3, x3bytes, step_bytes);
+            memcpy(y3, y3bytes, step_bytes);
+            memcpy(z3, z3bytes, step_bytes);
+            got_result = true;
+            delete x1in;
+            delete y1in;
+            delete z1in;
+            delete dx3;
+            delete dy3;
+            delete dz3;
+            break;
+        }
 #ifdef PARALLEL_SIGMA
         int start = nelts%2;
         int rnelts = nelts - start;
@@ -530,7 +549,7 @@ int do_calc_np_sigma(int nelts, uint8_t* modulus_q, uint8_t* scalar, uint8_t* x1
         ry = new uint8_t[MNT_SIZE*rnelts/2];
         rz = new uint8_t[MNT_SIZE*rnelts/2];
         while(rnelts > 1) {
-            do_sigma(rnelts, 1, x3bytes + start*MNT_SIZE, y3bytes + start*MNT_SIZE, z3bytes + start*MNT_SIZE, rx, ry, rz);
+            do_sigma(rnelts, type, x3bytes + start*MNT_SIZE, y3bytes + start*MNT_SIZE, z3bytes + start*MNT_SIZE, rx, ry, rz);
             rnelts = rnelts >> 1;
             memcpy(x3bytes + start*MNT_SIZE, rx, rnelts*MNT_SIZE);
             memcpy(y3bytes + start*MNT_SIZE, ry, rnelts*MNT_SIZE);
@@ -648,14 +667,14 @@ int mnt4_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, u
     for(int i = 0; i < step; i++) {
         memcpy(modulus_bytes + i*fn_bytes, mnt4_modulus, fn_bytes);
     }
-    do_calc_np_sigma<mnt4g1_calc_np, mnt4g1_pq_plus>(n, modulus_bytes, scalar, x1, y1, z1, x3, y3, z3);
+    do_calc_np_sigma<mnt4g1_calc_np, mnt4g1_pq_plus>(n, MNT4, modulus_bytes, scalar, x1, y1, z1, x3, y3, z3);
     delete modulus_bytes;
     return 0;
 }
 
 int mnt6_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
-    // test
 #if 0
+    // test
     n = 1;
     int sn = 96;
     x1 += sn;
@@ -672,7 +691,7 @@ int mnt6_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, u
     for(int i = 0; i < step; i++) {
         memcpy(modulus_bytes + i*fn_bytes, mnt6_modulus, fn_bytes);
     }
-    do_calc_np_sigma<mnt6g1_calc_np, mnt6g1_pq_plus>(n, modulus_bytes, scalar, x1, y1, z1, x3, y3, z3);
+    do_calc_np_sigma<mnt6g1_calc_np, mnt6g1_pq_plus>(n, MNT6, modulus_bytes, scalar, x1, y1, z1, x3, y3, z3);
     delete modulus_bytes;
     return 0;
 }
@@ -1118,7 +1137,7 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
     fixnum_array *rx30, *rx31, *rx32, *ry30, *ry31, *ry32, *rz30, *rz31, *rz32;
     int got_result = false;
 
-#if 1
+#if 0
     printf("input:\n");
     printf("x10:");
     for (int i = 0; i < step_bytes; i ++) {
@@ -1240,7 +1259,7 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
         delete dz30;
         delete dz31;
         delete dz32;
-#if 1
+#if 0
         printf("calc np result\n");
         printf("x30:");
         for (int i = 0; i < step_bytes; i ++) {
@@ -1401,7 +1420,7 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
             //print_g2(x30bytes + k * fn_bytes, x31bytes + k * fn_bytes, y30bytes + k * fn_bytes, y31bytes + k * fn_bytes, z30bytes + k * fn_bytes, z31bytes + k * fn_bytes);
             x20in = fixnum_array::create(x30bytes + k * fn_bytes, fn_bytes, fn_bytes);
             x21in = fixnum_array::create(x31bytes + k * fn_bytes, fn_bytes, fn_bytes);
-            x21in = fixnum_array::create(x32bytes + k * fn_bytes, fn_bytes, fn_bytes);
+            x22in = fixnum_array::create(x32bytes + k * fn_bytes, fn_bytes, fn_bytes);
             y20in = fixnum_array::create(y30bytes + k * fn_bytes, fn_bytes, fn_bytes);
             y21in = fixnum_array::create(y31bytes + k * fn_bytes, fn_bytes, fn_bytes);
             y22in = fixnum_array::create(y32bytes + k * fn_bytes, fn_bytes, fn_bytes);
