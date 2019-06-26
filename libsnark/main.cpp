@@ -331,13 +331,17 @@ G multiexpG1(typename std::vector<Fr>::const_iterator scalar_start,
     setBigData(&bigint_x, x3, esize);
     setBigData(&bigint_y, y3, esize);
     setBigData(&bigint_z, z3, esize);
+#if 0
     bigint_x.print_hex();
     bigint_y.print_hex();
     bigint_z.print_hex();
+#endif
     G result = G(bigint_x, bigint_y, bigint_z);
+#if 0
     result.X().mont_repr.print_hex();
     result.Y().mont_repr.print_hex();
     result.Z().mont_repr.print_hex();
+#endif
     return result;
 }
 
@@ -418,22 +422,26 @@ G multiexpG2(typename std::vector<Fr>::const_iterator scalar_start,
     setBigData(&bigint_y1, y31, esize);
     setBigData(&bigint_z0, z30, esize);
     setBigData(&bigint_z1, z31, esize);
+#if 0
     bigint_x0.print_hex();
     bigint_x1.print_hex();
     bigint_y0.print_hex();
     bigint_y1.print_hex();
     bigint_z0.print_hex();
     bigint_z1.print_hex();
+#endif
     mnt4753_Fq2 bigint_x = mnt4753_Fq2(bigint_x0, bigint_x1);
     mnt4753_Fq2 bigint_y = mnt4753_Fq2(bigint_y0, bigint_y1);
     mnt4753_Fq2 bigint_z = mnt4753_Fq2(bigint_z0, bigint_z1);
     G result = G(bigint_x, bigint_y, bigint_z);
+#if 0
     result.X().c0.mont_repr.print_hex();
     result.X().c1.mont_repr.print_hex();
     result.Y().c0.mont_repr.print_hex();
     result.Y().c1.mont_repr.print_hex();
     result.Z().c0.mont_repr.print_hex();
     result.Z().c1.mont_repr.print_hex();
+#endif
     return result;
 }
 
@@ -557,13 +565,17 @@ G multiexp6G1(typename std::vector<Fr>::const_iterator scalar_start,
     setBigData(&bigint_x, x3, esize);
     setBigData(&bigint_y, y3, esize);
     setBigData(&bigint_z, z3, esize);
+#if 0
     bigint_x.print_hex();
     bigint_y.print_hex();
     bigint_z.print_hex();
+#endif
     G result = G(bigint_x, bigint_y, bigint_z);
+#if 0
     result.X().mont_repr.print_hex();
     result.Y().mont_repr.print_hex();
     result.Z().mont_repr.print_hex();
+#endif
     return result;
 }
 
@@ -637,6 +649,7 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
         memcpy(scalar_val + i*esize, val, esize);
         i ++;
     }
+#if 0
     printf("x input:");
     for (int i = 0 ; i < thr_total_size; i ++) {
         printf("%x", x_val[i]);
@@ -656,6 +669,7 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
         if ((i+1)%total_size == 0)  printf("\n");
     }
     printf("\n");
+#endif
 
     mnt6_g2_do_calc_np_sigma(size, scalar_val, x_val, y_val, z_val, x3, y3, z3);
     delete x_val;
@@ -672,6 +686,7 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
     setBigData(&bigint_z0, z3, esize);
     setBigData(&bigint_z1, z3+esize, esize);
     setBigData(&bigint_z2, z3+2*esize, esize);
+#if 0
     bigint_x0.print_hex();
     bigint_x1.print_hex();
     bigint_x2.print_hex();
@@ -681,10 +696,12 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
     bigint_z0.print_hex();
     bigint_z1.print_hex();
     bigint_z2.print_hex();
+#endif
     mnt6753_Fq3 bigint_x = mnt6753_Fq3(bigint_x0, bigint_x1, bigint_x2);
     mnt6753_Fq3 bigint_y = mnt6753_Fq3(bigint_y0, bigint_y1, bigint_y2);
     mnt6753_Fq3 bigint_z = mnt6753_Fq3(bigint_z0, bigint_z1, bigint_z2);
     G result = G(bigint_x, bigint_y, bigint_z);
+#if 0
     result.X().c0.mont_repr.print_hex();
     result.X().c1.mont_repr.print_hex();
     result.X().c2.mont_repr.print_hex();
@@ -694,6 +711,7 @@ G multiexp6G2(typename std::vector<Fr>::const_iterator scalar_start,
     result.Z().c0.mont_repr.print_hex();
     result.Z().c1.mont_repr.print_hex();
     result.Z().c2.mont_repr.print_hex();
+#endif
     return result;
 }
 
