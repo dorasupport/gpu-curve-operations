@@ -16,7 +16,7 @@ namespace MNT_G{
 template< typename fixnum >
 class mnt6_g1 {
 public:
-__device__ void dump(fixnum n, int size) {
+static __device__ void dump(fixnum n, int size) {
 #if 0
 	for (int i = 0; i < size; i++) {
 		printf("DUMP [%d] %x\n", i, fixnum::get(n, i));
@@ -26,6 +26,11 @@ __device__ void dump(fixnum n, int size) {
 }
 
 static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
+#if 0
+    printf("pq plus\n");
+    dump(x1, 24);
+    dump(x2, 24);
+#endif
     if (fixnum::is_zero(x1) && fixnum::is_zero(z1)) {
         x3 = x2;
         y3 = y2;
@@ -103,9 +108,17 @@ static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixn
 
     // z3 = vvv*Z1Z2
     m.mul(z3, vvv, z1z2);
+#if 0
+    printf("result\n");
+    dump(x3, 24);
+#endif
 }
 
 static __device__ void p_double(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
+#if 0
+    printf("p double\n");
+    dump(x1, 24);
+#endif
     if (fixnum::is_zero(x1) && fixnum::is_zero(z1)) {
         x3 = x1;
         y3 = y1;
@@ -132,8 +145,8 @@ static __device__ void p_double(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixn
         m.add(temp2, temp, ZZ);
         temp = temp2;
     }
-    m.add(temp2, XX, XX);
-    m.add(temp2, temp2, XX);
+    m.add(temp, XX, XX);
+    m.add(temp, temp, XX);
     m.add(w, temp, temp2);
 
     fixnum s;
@@ -181,6 +194,10 @@ static __device__ void p_double(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixn
 
     //  Z3 = sss
     z3 = sss;
+#if 0
+    printf("result\n");
+    dump(x3, 24);
+#endif
 }
 
 };

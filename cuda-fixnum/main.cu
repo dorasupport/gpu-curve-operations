@@ -190,8 +190,15 @@ struct mnt6g1_calc_np {
     int i = 24*32 - 1;
     bool found_one = false;
     int count = 0;
+#if 0
+    dump(w, 24);
+    dump(x1, 24);
+    dump(y1, 24);
+    dump(z1, 24);
+#endif
     while(i >= 0) {
         size_t value = fixnum::get(tempw, i/32);
+        //printf("value[%d] is %x\n", i, value);
         if (found_one) {
             mnt6g1::p_double(mod, mod, rx, ry, rz, rx, ry, rz);
         }
@@ -207,6 +214,7 @@ struct mnt6g1_calc_np {
         }
         i --;
         count ++;
+        //if (count >= 25) break;
     }
     x3 = rx;
     y3 = ry;
@@ -443,11 +451,32 @@ int do_calc_np_sigma(int nelts, uint8_t* modulus_q, uint8_t* scalar, uint8_t* x1
     uint8_t *z3bytes = new uint8_t[step_bytes];
     fixnum_array *dx3, *dy3, *dz3, *x1in, *y1in, *z1in;
     fixnum_array *x2in, *y2in, *z2in;
+#if 0
+    printf("x:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%x", x1[i]);
+        if ((i+1)%fn_bytes == 0) printf("\t");
+    }
+    printf("\ny:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%x", y1[i]);
+        if ((i+1)%fn_bytes == 0) printf("\t");
+    }
+    printf("\nz:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%x", z1[i]);
+        if ((i+1)%fn_bytes == 0) printf("\t");
+    }
+    printf("\nscalar:");
+    for (int i = 0; i < step_bytes; i ++) {
+        printf("%x", scalar[i]);
+        if ((i+1)%fn_bytes == 0) printf("\t");
+    }
+    printf("\n");
+#endif
 
     auto modulusq = fixnum_array::create(modulus_q, step_bytes, fn_bytes);
     // scaler
-    uint8_t *modulus_bytes = new uint8_t[step_bytes];
-    memset(modulus_bytes, 0x0, step_bytes);
     auto modulusw = fixnum_array::create(scalar, step_bytes, fn_bytes);
     
     // sigma result
@@ -466,6 +495,25 @@ int do_calc_np_sigma(int nelts, uint8_t* modulus_q, uint8_t* scalar, uint8_t* x1
         dx3->retrieve_all(x3bytes, step_bytes, &size);
         dy3->retrieve_all(y3bytes, step_bytes, &size);
         dz3->retrieve_all(z3bytes, step_bytes, &size);
+#if 0
+        printf("calc np result\n");
+        printf("x3:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", x3bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\ny3:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", y3bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\nz3:");
+        for (int i = 0; i < step_bytes; i ++) {
+            printf("%x", z3bytes[i]);
+            if ((i+1)%fn_bytes == 0) printf("\t");
+        }
+        printf("\n");
+#endif
 #ifdef PARALLEL_SIGMA
         int start = nelts%2;
         int rnelts = nelts - start;
@@ -562,7 +610,6 @@ int do_calc_np_sigma(int nelts, uint8_t* modulus_q, uint8_t* scalar, uint8_t* x1
     delete x3bytes;
     delete y3bytes;
     delete z3bytes;
-    delete modulus_bytes;
 
     printf("final result");
     printf("\nx3:");
@@ -599,6 +646,15 @@ int mnt4_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, u
 }
 
 int mnt6_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+    // test
+#if 0
+    n = 1;
+    int sn = 96;
+    x1 += sn;
+    y1 += sn;
+    z1 += sn;
+    scalar += sn;
+#endif
     int step = n;
     int fn_bytes = 96;
     int step_bytes = fn_bytes * step;
