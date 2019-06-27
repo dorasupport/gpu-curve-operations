@@ -99,11 +99,10 @@ static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixn
 
     // y3 = u*(R-A)-vvv*Y1Z2
     fixnum temp;
-    m.sub(temp, R, A);
-    m.mul(temp, u, temp);
-    fixnum temp2;
-    m.mul(temp2, vvv, y1z2);
-    m.sub(y3, temp, temp2);
+    m.sub(y3, R, A);
+    m.mul(y3, u, y3);
+    m.mul(temp, vvv, y1z2);
+    m.sub(y3, y3, temp);
 
     // z3 = vvv*Z1Z2
     m.mul(z3, vvv, z1z2);
@@ -119,8 +118,6 @@ static __device__ void p_double(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fix
     typedef modnum_monty_cios<fixnum> modnum;
     modnum m(mod);
 
-    fixnum temp, temp2;
-
     fixnum XX;
     // XX = X1*X1
     m.mul(XX, x1, x1);
@@ -131,15 +128,15 @@ static __device__ void p_double(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fix
 
     fixnum w;
     // w = a*ZZ+3*XX    a = 2
-    m.add(temp, ZZ, ZZ);
-    m.add(temp2, XX, XX);
-    m.add(temp2, temp2, XX);
-    m.add(w, temp, temp2);
+    m.add(w, ZZ, ZZ);
+    m.add(w, w, XX);
+    m.add(w, w, XX);
+    m.add(w, w, XX);
 
     fixnum s;
     // s = 2*Y1*Z1
-    m.mul(temp, y1, z1);
-    m.add(s, temp, temp);
+    m.mul(s, y1, z1);
+    m.add(s, s, s);
 
     fixnum ss;
     // ss = s*s
@@ -159,25 +156,25 @@ static __device__ void p_double(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fix
 
     fixnum B;
     // B = (X1+R)2-XX-RR
-    m.add(temp, x1, R);
-    m.mul(temp2, temp, temp);
-    m.sub(temp, temp2, XX);
-    m.sub(B, temp, RR);
+    m.add(B, x1, R);
+    m.mul(B, B, B);
+    m.sub(B, B, XX);
+    m.sub(B, B, RR);
 
     fixnum h;
     // h = w*2-2*B
-    m.mul(temp, w, w);
-    m.add(temp2, B, B);
-    m.sub(h, temp, temp2);
+    m.mul(h, w, w);
+    m.sub(h, h, B);
+    m.sub(h, h, B);
 
     // X3 = h * s
     m.mul(x3, h, s);
 
     // Y3 = w*(B-h)-2*RR
-    m.sub(temp, B, h);
-    m.add(temp2, RR, RR);
-    m.mul(temp, w, temp);
-    m.sub(y3, temp, temp2);
+    m.sub(y3, B, h);
+    m.mul(y3, w, y3);
+    m.sub(y3, y3, RR);
+    m.sub(y3, y3, RR);
 
     //  Z3 = sss
     z3 = sss;

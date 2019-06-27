@@ -38,7 +38,7 @@ static __device__ void fp2_multi(fixnum mod, fixnum a, fixnum b, fixnum A, fixnu
     fixnum temp, temp2;
     temp2= bB;
     for (int i = 0; i < 12; i++) {
-        m.add(temp, temp2, bB); 
+        m.add(temp, temp2, bB);
         temp2 = temp;
     }
     m.add(r10, aA, temp);
