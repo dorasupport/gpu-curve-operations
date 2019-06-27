@@ -147,6 +147,13 @@ static __device__ void fp3_square(fixnum mod, fixnum a, fixnum b, fixnum c, fixn
     m.sub(r12, r12, s4);
 }
 
+static __device__ int fp3_equal(fixnum x10, fixnum x11, fixnum x12, fixnum y10, fixnum y11, fixnum y12) {
+    if (fixnum::cmp(x10, y10) == 0 && fixnum::cmp(x11, y11) == 0 && fixnum::cmp(x12, y12) == 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum x12, fixnum y10, fixnum y11, fixnum y12, fixnum z10, fixnum z11, fixnum z12, fixnum x20, fixnum x21, fixnum x22, fixnum y20, fixnum y21, fixnum y22, fixnum z20, fixnum z21, fixnum z22, fixnum &x30, fixnum &x31, fixnum &x32, fixnum &y30, fixnum &y31, fixnum &y32, fixnum &z30, fixnum &z31, fixnum &z32) {
 #if 0
     printf("6g2 pq_plus\n");
@@ -202,7 +209,11 @@ static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum x12, f
     fixnum y2z10, y2z11, y2z12;
     fp3_multi(mod, y20, y21, y22, z10, z11, z12, y2z10, y2z11, y2z12);
 
-    // if (X1Z2 == X2Z1 && Y1Z2 == Y2Z1) TODO
+    // if (X1Z2 == X2Z1 && Y1Z2 == Y2Z1)
+    if (fp3_equal(x1z20, x1z21, x1z22, x2z10, x2z11, x2z12) && fp3_equal(y1z20, y1z21, y1z22, y2z10, y2z11, y2z12)) {
+        p_double(mod, x10, x11, x12, y10, y11, y12, z10, z11, z12, x30, x31, x32, y30, y31, y32, z30, z31, z32);
+        return;
+    }
 
     // Z1Z2 = Z1*Z2
     fixnum z1z20, z1z21, z1z22;

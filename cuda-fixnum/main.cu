@@ -98,7 +98,7 @@ struct mnt4g1_calc_np {
         }
 #endif
         if (found_one) {
-            mnt4g1::p_double(mod, mod, rx, ry, rz, rx, ry, rz);
+            mnt4g1::p_double(mod, rx, ry, rz, rx, ry, rz);
 #if 0
             if (threadIdx.x > 23) {
             printf("double result\n");
@@ -199,7 +199,7 @@ struct mnt6g1_calc_np {
         size_t value = fixnum::get(tempw, i/32);
         //printf("value[%d] is %x\n", i, value);
         if (found_one) {
-            mnt6g1::p_double(mod, mod, rx, ry, rz, rx, ry, rz);
+            mnt6g1::p_double(mod, rx, ry, rz, rx, ry, rz);
         }
         if ((value)&(1<<i%32)) {
             if (found_one == false) {

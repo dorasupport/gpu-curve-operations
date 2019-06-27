@@ -47,20 +47,24 @@ static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixn
     modnum m(mod);
     fixnum y1z2, x1z2, z1z2, y2z1, x2z1;
 
-    // y1z2
-    m.mul(y1z2, y1, z2);
-
     // x1z2
     m.mul(x1z2, x1, z2);
 
-    // z1z2
-    m.mul(z1z2, z1, z2);
+    // x2z1
+    m.mul(x2z1, x2, z1);
+
+    // y1z2
+    m.mul(y1z2, y1, z2);
 
     // y2z1
     m.mul(y2z1, y2, z1);
 
-    // x2z1
-    m.mul(x2z1, x2, z1);
+    if (fixnum::cmp(x1z2, x2z1) == 0 && fixnum::cmp(y1z2, y2z1) == 0) {
+        p_double(mod, x1, y1, z1, x3, y3, z3);
+        return;
+    }
+    // z1z2
+    m.mul(z1z2, z1, z2);
 
     fixnum u;
     // u = Y2Z1-Y1Z2
@@ -114,7 +118,7 @@ static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixn
 #endif
 }
 
-static __device__ void p_double(fixnum mod, fixnum a, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
+static __device__ void p_double(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
 #if 0
     printf("p double\n");
     dump(x1, 24);
