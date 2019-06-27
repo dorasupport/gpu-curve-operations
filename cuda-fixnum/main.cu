@@ -22,6 +22,10 @@ int BLOCK_NUM = 4096;
 #define MNT4 1
 #define MNT6 2
 
+#if 1
+#define printf(fmt, ...) (0)
+#endif
+
 // mnt4_q
 const uint8_t mnt4_modulus[MNT_SIZE] = {1,128,94,36,222,99,144,94,159,17,221,44,82,84,157,227,240,37,196,154,113,16,136,99,164,84,114,118,233,204,90,104,56,126,83,203,165,13,15,184,157,5,24,242,118,231,23,177,157,247,90,161,217,36,209,153,141,237,160,232,37,185,253,7,115,216,151,108,249,232,183,94,237,175,143,91,80,151,249,183,173,205,226,238,34,144,34,16,17,196,146,45,198,196,1,0};
 
@@ -77,10 +81,8 @@ struct mnt4g1_calc_np {
     typedef mnt4_g1<fixnum> mnt4g1;
     modnum m(mod);
     fixnum rx, ry, rz;
-    fixnum tempw = w;
     int i = 24*32 - 1;
     bool found_one = false;
-    int count = 0;
 #if 0
     if (threadIdx.x > 23) {
         dump(w, 24);
@@ -91,7 +93,7 @@ struct mnt4g1_calc_np {
 #endif
     //while(fixnum::cmp(tempw, fixnum::zero()) && i >= 0) {
     while(i >= 0) {
-        size_t value = fixnum::get(tempw, i/32);
+        size_t value = fixnum::get(w, i/32);
 #if 0
         if (threadIdx.x > 23) {
             printf("i %d value[%d] %x\n", i, i/32, value);
@@ -123,7 +125,6 @@ struct mnt4g1_calc_np {
             found_one = true;
         }
         i --;
-        count ++;
 #if 0
         if (threadIdx.x > 23) {
         //if (count >20) break;
@@ -148,12 +149,10 @@ struct mnt4g2_calc_np {
     typedef modnum_monty_cios<fixnum> modnum;
     typedef mnt4_g2<fixnum> mnt4g2;
     modnum m(mod);
-    fixnum tempw = w;
     int i = 24*32 - 1;
     bool found_one = false;
-    int count = 0;
     while(i >= 0) {
-        size_t value = fixnum::get(tempw, i/32);
+        size_t value = fixnum::get(w, i/32);
         //printf("value[%d] is %x\n", i, value);
         if (found_one) {
             mnt4g2::p_double(mod, x30, x31, y30, y31, z30, z31, x30, x31, y30, y31, z30, z31);
@@ -172,7 +171,6 @@ struct mnt4g2_calc_np {
             found_one = true;
         }
         i --;
-        count ++;
         //if (count >= 50) break;
     }
   }
@@ -185,10 +183,8 @@ struct mnt6g1_calc_np {
     typedef mnt6_g1<fixnum> mnt6g1;
     modnum m(mod);
     fixnum rx, ry, rz;
-    fixnum tempw = w;
     int i = 24*32 - 1;
     bool found_one = false;
-    int count = 0;
 #if 0
     dump(w, 24);
     dump(x1, 24);
@@ -196,7 +192,7 @@ struct mnt6g1_calc_np {
     dump(z1, 24);
 #endif
     while(i >= 0) {
-        size_t value = fixnum::get(tempw, i/32);
+        size_t value = fixnum::get(w, i/32);
         //printf("value[%d] is %x\n", i, value);
         if (found_one) {
             mnt6g1::p_double(mod, rx, ry, rz, rx, ry, rz);
@@ -212,7 +208,6 @@ struct mnt6g1_calc_np {
             found_one = true;
         }
         i --;
-        count ++;
         //if (count >= 25) break;
     }
     x3 = rx;
@@ -227,10 +222,8 @@ struct mnt6g2_calc_np {
     typedef modnum_monty_cios<fixnum> modnum;
     typedef mnt6_g2<fixnum> mnt6g2;
     modnum m(mod);
-    fixnum tempw = w;
     int i = 24*32 - 1;
     bool found_one = false;
-    int count = 0;
 #if 0
     dump(w, 24);
     dump(x10, 24);
@@ -238,7 +231,7 @@ struct mnt6g2_calc_np {
     dump(z10, 24);
 #endif
     while(i >= 0) {
-        size_t value = fixnum::get(tempw, i/32);
+        size_t value = fixnum::get(w, i/32);
         //printf("value[%d] is %x\n", i, value);
         if (found_one) {
             mnt6g2::p_double(mod, x30, x31, x32, y30, y31, y32, z30, z31, z32, x30, x31, x32, y30, y31, y32, z30, z31, z32);
@@ -260,7 +253,6 @@ struct mnt6g2_calc_np {
             found_one = true;
         }
         i --;
-        count ++;
         //if (count >= 25) break;
     }
   }
@@ -361,7 +353,7 @@ inline void do_sigma(int nelts, int type, uint8_t *x, uint8_t *y, uint8_t *z, ui
     delete modulus_bytes;
 }
 
-inline void do_sigma(int nelts, int type, uint8_t *x0, uint8_t *x1, uint8_t *x2, uint8_t *y0, uint8_t *y1, uint8_t *y2, uint8_t *z0, uint8_t *z1, uint8_t *z2, uint8_t *rx0, uint8_t *rx1, uint8_t *rx2, uint8_t *ry0, uint8_t *ry1, uint8_t *ry2, uint8_t *rz0, uint8_t *rz1, uint8_t *rz2) {
+inline void do_sigma(int nelts, uint8_t *x0, uint8_t *x1, uint8_t *x2, uint8_t *y0, uint8_t *y1, uint8_t *y2, uint8_t *z0, uint8_t *z1, uint8_t *z2, uint8_t *rx0, uint8_t *rx1, uint8_t *rx2, uint8_t *ry0, uint8_t *ry1, uint8_t *ry2, uint8_t *rz0, uint8_t *rz1, uint8_t *rz2) {
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
     fixnum_array *x10in, *x11in, *x12in, *y10in, *y11in, *y12in, *z10in, *z11in, *z12in, *x20in, *x21in, *x22in, *y20in, *y21in, *y22in, *z20in, *z21in, *z22in;
@@ -696,7 +688,7 @@ int mnt6_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, u
     return 0;
 }
 
-inline void do_sigma(int nelts, int type, uint8_t *x0, uint8_t *x1, uint8_t *y0, uint8_t *y1, uint8_t *z0, uint8_t *z1, uint8_t *rx0, uint8_t *rx1, uint8_t *ry0, uint8_t *ry1, uint8_t *rz0, uint8_t *rz1) {
+inline void do_sigma(int nelts, uint8_t *x0, uint8_t *x1, uint8_t *y0, uint8_t *y1, uint8_t *z0, uint8_t *z1, uint8_t *rx0, uint8_t *rx1, uint8_t *ry0, uint8_t *ry1, uint8_t *rz0, uint8_t *rz1) {
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
     fixnum_array *x10in, *x11in, *y10in, *y11in, *z10in, *z11in, *x20in, *x21in, *y20in, *y21in, *z20in, *z21in;
@@ -936,7 +928,7 @@ int mnt4_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x10, uint8_t*
         rz0 = new uint8_t[MNT_SIZE*rnelts/2];
         rz1 = new uint8_t[MNT_SIZE*rnelts/2];
         while(rnelts > 1) {
-            do_sigma(rnelts, 1, x30bytes + start*MNT_SIZE, x31bytes + start*MNT_SIZE, y30bytes + start*MNT_SIZE, y31bytes + start*MNT_SIZE, z30bytes + start*MNT_SIZE, z31bytes + start*MNT_SIZE, rx0, rx1, ry0, ry1, rz0, rz1);
+            do_sigma(rnelts, x30bytes + start*MNT_SIZE, x31bytes + start*MNT_SIZE, y30bytes + start*MNT_SIZE, y31bytes + start*MNT_SIZE, z30bytes + start*MNT_SIZE, z31bytes + start*MNT_SIZE, rx0, rx1, ry0, ry1, rz0, rz1);
             rnelts = rnelts >> 1;
             memcpy(x30bytes + start*MNT_SIZE, rx0, rnelts*MNT_SIZE);
             memcpy(x31bytes + start*MNT_SIZE, rx1, rnelts*MNT_SIZE);
@@ -1322,7 +1314,7 @@ int mnt6_g2_do_calc_np_sigma(int nelts, uint8_t * scalar, uint8_t* x, uint8_t* y
         rz1 = new uint8_t[MNT_SIZE*rnelts/2];
         rz2 = new uint8_t[MNT_SIZE*rnelts/2];
         while(rnelts > 1) {
-            do_sigma(rnelts, 1, x30bytes + start*MNT_SIZE, x31bytes + start*MNT_SIZE, x32bytes + start*MNT_SIZE, y30bytes + start*MNT_SIZE, y31bytes + start*MNT_SIZE, y32bytes + start*MNT_SIZE, z30bytes + start*MNT_SIZE, z31bytes + start*MNT_SIZE, z32bytes + start*MNT_SIZE, rx0, rx1, rx2, ry0, ry1, ry2, rz0, rz1, rz2);
+            do_sigma(rnelts, x30bytes + start*MNT_SIZE, x31bytes + start*MNT_SIZE, x32bytes + start*MNT_SIZE, y30bytes + start*MNT_SIZE, y31bytes + start*MNT_SIZE, y32bytes + start*MNT_SIZE, z30bytes + start*MNT_SIZE, z31bytes + start*MNT_SIZE, z32bytes + start*MNT_SIZE, rx0, rx1, rx2, ry0, ry1, ry2, rz0, rz1, rz2);
             rnelts = rnelts >> 1;
             memcpy(x30bytes + start*MNT_SIZE, rx0, rnelts*MNT_SIZE);
             memcpy(x31bytes + start*MNT_SIZE, rx1, rnelts*MNT_SIZE);

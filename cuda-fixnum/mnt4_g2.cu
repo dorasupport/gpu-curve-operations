@@ -25,14 +25,10 @@ static __device__ void dump(fixnum n, int size) {
 	printf("dump [%d]=\%04x\n", threadIdx.x, fixnum::get(n, threadIdx.x));
 }
 
-static __device__ void fp2_multi(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
+static __device__ void fp2_multi(fixnum mod, fixnum a, fixnum b, fixnum A, fixnum B, fixnum &r10, fixnum &r11) {
     typedef modnum_monty_cios<fixnum> modnum;
     modnum m(mod);
     fixnum aA, bB;
-    fixnum a = x10;
-    fixnum b = x11;
-    fixnum A = y10;
-    fixnum B = y11;
     // aA = a * A
     m.mul(aA, a, A);
     m.mul(bB, b, B);

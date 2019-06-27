@@ -207,20 +207,25 @@ int run_prover(
     // Now the 5 multi-exponentiations
     G1<ppT> evaluation_At = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
+#if 0
     printf("evaluation_At\n");
     evaluation_At.X().mont_repr.print_hex();
     evaluation_At.Y().mont_repr.print_hex();
     evaluation_At.Z().mont_repr.print_hex();
+#endif
 
     G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
+#if 0
     printf("evaluation_Bt1t\n");
     evaluation_Bt1.X().mont_repr.print_hex();
     evaluation_Bt1.Y().mont_repr.print_hex();
     evaluation_Bt1.Z().mont_repr.print_hex();
+#endif
 
     G2<ppT> evaluation_Bt2 = multiexp<G2<ppT>, Fr<ppT>>(
         w.begin(), parameters.B2.begin(), parameters.m + 1);
+#if 0
     printf("evaluation_Bt2\n");
     evaluation_Bt2.X().c0.mont_repr.print_hex();
     evaluation_Bt2.X().c1.mont_repr.print_hex();
@@ -228,21 +233,26 @@ int run_prover(
     evaluation_Bt2.Y().c1.mont_repr.print_hex();
     evaluation_Bt2.Z().c0.mont_repr.print_hex();
     evaluation_Bt2.Z().c1.mont_repr.print_hex();
+#endif
     G1<ppT> evaluation_Ht = multiexp<G1<ppT>, Fr<ppT>>(
         coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
+#if 0
     printf("evaluation_Ht\n");
     evaluation_Ht.X().mont_repr.print_hex();
     evaluation_Ht.Y().mont_repr.print_hex();
     evaluation_Ht.Z().mont_repr.print_hex();
+#endif
 
     G1<ppT> evaluation_Lt = multiexp<G1<ppT>, Fr<ppT>>(
         w.begin() + primary_input_size + 1,
         parameters.L.begin(),
         parameters.m - 1);
+#if 0
     printf("evaluation_Lt\n");
     evaluation_Lt.X().mont_repr.print_hex();
     evaluation_Lt.Y().mont_repr.print_hex();
     evaluation_Lt.Z().mont_repr.print_hex();
+#endif
 
     libff::G1<ppT> C = evaluation_Ht + evaluation_Lt + input.r * evaluation_Bt1; /*+ s *  g1_A  - (r * s) * pk.delta_g1; */
 
@@ -477,18 +487,23 @@ int mnt4_prove(
     libff::enter_block("Multi-exponentiations");
 
 // Now the 5 multi-exponentiations
+    printf("compute evaluation_At\n");
     G1<ppT> evaluation_At = multiexpG1<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
 
+    printf("compute evaluation_Bt1\n");
     G1<ppT> evaluation_Bt1 = multiexpG1<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
 
+    printf("compute evaluation_Bt2\n");
     G2<ppT> evaluation_Bt2 = multiexpG2<G2<ppT>, Fr<ppT>>(
         w.begin(), parameters.B2.begin(), parameters.m + 1);
 
+    printf("compute evaluation_Ht\n");
     G1<ppT> evaluation_Ht = multiexpG1<G1<ppT>, Fr<ppT>>(
         coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
 
+    printf("compute evaluation_Lt\n");
     G1<ppT> evaluation_Lt = multiexpG1<G1<ppT>, Fr<ppT>>(
         w.begin() + primary_input_size + 1,
         parameters.L.begin(),
@@ -747,17 +762,23 @@ int mnt6_prove(
     libff::enter_block("Multi-exponentiations");
 
 // Now the 5 multi-exponentiations
+    printf("compute evaluation_At\n");
     G1<ppT> evaluation_At = multiexp6G1<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.A.begin(), parameters.m + 1);
+
+    printf("compute evaluation_Bt1\n");
     G1<ppT> evaluation_Bt1 = multiexp6G1<G1<ppT>, Fr<ppT>>(
         w.begin(), parameters.B1.begin(), parameters.m + 1);
 
+    printf("compute evaluation_Bt2\n");
     G2<ppT> evaluation_Bt2 = multiexp6G2<G2<ppT>, Fr<ppT>>(
         w.begin(), parameters.B2.begin(), parameters.m + 1);
 
+    printf("compute evaluation_Ht\n");
     G1<ppT> evaluation_Ht = multiexp6G1<G1<ppT>, Fr<ppT>>(
         coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
 
+    printf("compute evaluation_Lt\n");
     G1<ppT> evaluation_Lt = multiexp6G1<G1<ppT>, Fr<ppT>>(
         w.begin() + primary_input_size + 1,
         parameters.L.begin(),
