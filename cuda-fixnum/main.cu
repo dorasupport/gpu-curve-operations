@@ -84,7 +84,8 @@ struct mnt4g1_calc_np {
     typedef modnum_monty_cios<fixnum> modnum;
     typedef mnt4_g1<fixnum> mnt4g1;
     fixnum rx, ry, rz;
-    int i = 24*32 - 1;
+    int i = 767;    //24*32 - 1;
+    int j = 23;     // total 24 bytes, each 32bit
     bool found_one = false;
 
     __shared__ uint8_t modulus_data[MNT_SIZE];
@@ -104,8 +105,12 @@ struct mnt4g1_calc_np {
     }
 #endif
     //while(fixnum::cmp(tempw, fixnum::zero()) && i >= 0) {
+    size_t value;
     while(i >= 0) {
-        size_t value = fixnum::get(w, i/32);
+        if ((i+1) == (j+1)*32) {
+            value = fixnum::get(w, j);
+            j --;
+        }
 #if 0
         if (threadIdx.x > 23) {
             printf("i %d value[%d] %x\n", i, i/32, value);
@@ -169,10 +174,16 @@ struct mnt4g2_calc_np {
 
     modnum m(*((fixnum *)modulus_data + threadIdx.x % 32));
 
-    int i = 24*32 - 1;
+    modnum m(mod);
+    int i = 767;    //24*32 - 1;
+    int j = 23;     // total 24 bytes, each 32bit
     bool found_one = false;
+    size_t value;
     while(i >= 0) {
-        size_t value = fixnum::get(w, i/32);
+        if ((i+1) == (j+1)*32) {
+            value = fixnum::get(w, j);
+            j --;
+        }
         //printf("value[%d] is %x\n", i, value);
         if (found_one) {
             mnt4g2::p_double(m, x30, x31, y30, y31, z30, z31, x30, x31, y30, y31, z30, z31);
