@@ -100,7 +100,7 @@ struct mnt4g1_calc_np {
         }
 #endif
         if (found_one) {
-            mnt4g1::p_double(mod, rx, ry, rz, rx, ry, rz);
+            mnt4g1::p_double(m, rx, ry, rz, rx, ry, rz);
 #if 0
             if (threadIdx.x > 23) {
             printf("double result\n");
@@ -114,7 +114,7 @@ struct mnt4g1_calc_np {
                 ry = y1;
                 rz = z1;
             } else {
-                mnt4g1::pq_plus(mod, rx, ry, rz, x1, y1, z1, rx, ry, rz);
+                mnt4g1::pq_plus(m, rx, ry, rz, x1, y1, z1, rx, ry, rz);
             }
 #if 0
             if (threadIdx.x > 23) {
@@ -155,7 +155,7 @@ struct mnt4g2_calc_np {
         size_t value = fixnum::get(w, i/32);
         //printf("value[%d] is %x\n", i, value);
         if (found_one) {
-            mnt4g2::p_double(mod, x30, x31, y30, y31, z30, z31, x30, x31, y30, y31, z30, z31);
+            mnt4g2::p_double(m, x30, x31, y30, y31, z30, z31, x30, x31, y30, y31, z30, z31);
         }
         if ((value)&(1<<i%32)) {
             if (found_one == false) {
@@ -166,7 +166,7 @@ struct mnt4g2_calc_np {
                 z30 = z10;
                 z31 = z11;
             } else {
-                mnt4g2::pq_plus(mod, x30, x31, y30, y31, z30, z31, x10, x11, y10, y11, z10, z11, x30, x31, y30, y31, z30, z31);
+                mnt4g2::pq_plus(m, x30, x31, y30, y31, z30, z31, x10, x11, y10, y11, z10, z11, x30, x31, y30, y31, z30, z31);
             }
             found_one = true;
         }

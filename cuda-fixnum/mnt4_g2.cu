@@ -25,9 +25,8 @@ static __device__ void dump(fixnum n, int size) {
 	printf("dump [%d]=\%04x\n", threadIdx.x, fixnum::get(n, threadIdx.x));
 }
 
-static __device__ void fp2_multi(fixnum mod, fixnum a, fixnum b, fixnum A, fixnum B, fixnum &r10, fixnum &r11) {
-    typedef modnum_monty_cios<fixnum> modnum;
-    modnum m(mod);
+typedef modnum_monty_cios<fixnum> modnum;
+static __device__ void fp2_multi(modnum m, fixnum a, fixnum b, fixnum A, fixnum B, fixnum &r10, fixnum &r11) {
     fixnum aA, bB;
     // aA = a * A
     m.mul(aA, a, A);
@@ -52,28 +51,20 @@ static __device__ void fp2_multi(fixnum mod, fixnum a, fixnum b, fixnum A, fixnu
     m.sub(r11, temp, bB);
 }
 
-static __device__ void fp2_sub(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
-    typedef modnum_monty_cios<fixnum> modnum;
-    modnum m(mod);
-    
+static __device__ void fp2_sub(modnum m, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
     m.sub(r10, x10, y10);
 
     m.sub(r11, x11, y11); 
 }
 
-static __device__ void fp2_add(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
-    typedef modnum_monty_cios<fixnum> modnum;
-    modnum m(mod);
+static __device__ void fp2_add(modnum m, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum &r10, fixnum &r11) {
     
     m.add(r10, x10, y10);
 
     m.add(r11, x11, y11); 
 }
 
-static __device__ void fp2_square(fixnum mod, fixnum x10, fixnum x11, fixnum &r10, fixnum &r11) {
-    typedef modnum_monty_cios<fixnum> modnum;
-    modnum m(mod);
-
+static __device__ void fp2_square(modnum m, fixnum x10, fixnum x11, fixnum &r10, fixnum &r11) {
     fixnum a = x10;
     fixnum b = x11;
 
@@ -117,7 +108,7 @@ static __device__ int fp2_equal(fixnum x10, fixnum x11, fixnum y10, fixnum y11) 
     return 0;
 }
 
-static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum z10, fixnum z11, fixnum x20, fixnum x21, fixnum y20, fixnum y21, fixnum z20, fixnum z21, fixnum &x30, fixnum &x31, fixnum &y30, fixnum &y31, fixnum &z30, fixnum &z31) {
+static __device__ void pq_plus(modnum m, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum z10, fixnum z11, fixnum x20, fixnum x21, fixnum y20, fixnum y21, fixnum z20, fixnum z21, fixnum &x30, fixnum &x31, fixnum &y30, fixnum &y31, fixnum &z30, fixnum &z31) {
 #if 0
     printf("4g2 pq_plus\n");
     printf("x1, y1, z1\n");
@@ -158,72 +149,72 @@ static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum y10, f
     fixnum temp0, temp1;
     // X1Z2 = X1*Z2
     fixnum x1z20, x1z21;
-    fp2_multi(mod, x10, x11, z20, z21, x1z20, x1z21);
+    fp2_multi(m, x10, x11, z20, z21, x1z20, x1z21);
 
     // X2Z1 = X2*Z1
     fixnum x2z10, x2z11;
-    fp2_multi(mod, x20, x21, z10, z11, x2z10, x2z11);
+    fp2_multi(m, x20, x21, z10, z11, x2z10, x2z11);
 
     // Y1Z2 = Y1*Z2
     fixnum y1z20, y1z21;
-    fp2_multi(mod, y10, y11, z20, z21, y1z20, y1z21);
+    fp2_multi(m, y10, y11, z20, z21, y1z20, y1z21);
 
     // Y2Z1 = Y2*Z1
     fixnum y2z10, y2z11;
-    fp2_multi(mod, y20, y21, z10, z11, y2z10, y2z11);
+    fp2_multi(m, y20, y21, z10, z11, y2z10, y2z11);
 
     // if (X1Z2 == X2Z1 && Y1Z2 == Y2Z1)
     if (fp2_equal(x1z20, x1z21, x2z10, x2z11) && fp2_equal(y1z20, y1z21, y2z10, y2z11)) {
-        p_double(mod, x10, x11, y10, y11, z10, z11, x30, x31, y30, y31, z30, z31);
+        p_double(m, x10, x11, y10, y11, z10, z11, x30, x31, y30, y31, z30, z31);
         return;
     }
 
     // Z1Z2 = Z1*Z2
     fixnum z1z20, z1z21;
-    fp2_multi(mod, z10, z11, z20, z21, z1z20, z1z21);
+    fp2_multi(m, z10, z11, z20, z21, z1z20, z1z21);
 
     // u    = Y2Z1-Y1Z2
     fixnum u0, u1;
-    fp2_sub(mod, y2z10, y2z11, y1z20, y1z21, u0, u1);
+    fp2_sub(m, y2z10, y2z11, y1z20, y1z21, u0, u1);
 
     // uu   = u^2
     fixnum uu0, uu1;
-    fp2_square(mod, u0, u1, uu0, uu1);
+    fp2_square(m, u0, u1, uu0, uu1);
     
     // v    = X2Z1-X1Z2 
     fixnum v0, v1;
-    fp2_sub(mod, x2z10, x2z11, x1z20, x1z21, v0, v1);
+    fp2_sub(m, x2z10, x2z11, x1z20, x1z21, v0, v1);
 
     // vv   = v^2
     fixnum vv0, vv1;
-    fp2_square(mod, v0, v1, vv0, vv1);
+    fp2_square(m, v0, v1, vv0, vv1);
 
     // vvv  = v*vv
     fixnum vvv0, vvv1;
-    fp2_multi(mod, v0, v1, vv0, vv1, vvv0, vvv1);
+    fp2_multi(m, v0, v1, vv0, vv1, vvv0, vvv1);
 
     // R    = vv*X1Z2
     fixnum R0, R1;
-    fp2_multi(mod, vv0, vv1, x1z20, x1z21, R0, R1);
+    fp2_multi(m, vv0, vv1, x1z20, x1z21, R0, R1);
 
     // A    = uu*Z1Z2 - vvv - 2*R
     fixnum A0, A1;
-    fp2_multi(mod, uu0, uu1, z1z20, z1z21, A0, A1);
-    fp2_add(mod, vvv0, vvv1, R0, R1, temp0, temp1);
-    fp2_add(mod, temp0, temp1, R0, R1, temp0, temp1);
-    fp2_sub(mod, A0, A1, temp0, temp1, A0, A1);
+    fp2_multi(m, uu0, uu1, z1z20, z1z21, A0, A1);
+    fp2_add(m, vvv0, vvv1, R0, R1, temp0, temp1);
+    fp2_add(m, temp0, temp1, R0, R1, temp0, temp1);
+    fp2_sub(m, A0, A1, temp0, temp1, A0, A1);
 
     // X3   = v*A
-    fp2_multi(mod, v0, v1, A0, A1, x30, x31);
+    fp2_multi(m, v0, v1, A0, A1, x30, x31);
 
     // Y3   = u*(R-A) - vvv*Y1Z2
-    fp2_sub(mod, R0, R1, A0, A1, temp0, temp1);
-    fp2_multi(mod, u0, u1, temp0, temp1, y30, y31);
-    fp2_multi(mod, vvv0, vvv1, y1z20, y1z21, temp0, temp1);
-    fp2_sub(mod, y30, y31, temp0, temp1, y30, y31); 
+    fp2_sub(m, R0, R1, A0, A1, temp0, temp1);
+    fp2_multi(m, u0, u1, temp0, temp1, y30, y31);
+    fp2_multi(m, vvv0, vvv1, y1z20, y1z21, temp0, temp1);
+    fp2_sub(m, y30, y31, temp0, temp1, y30, y31); 
 
     // Z3   = vvv*Z1Z2
-    fp2_multi(mod, vvv0, vvv1, z1z20, z1z21, z30, z31);
+    fp2_multi(m, vvv0, vvv1, z1z20, z1z21, z30, z31);
 
 #if 0
     printf("pq x3, y3, z3:\n");
@@ -236,14 +227,12 @@ static __device__ void pq_plus(fixnum mod, fixnum x10, fixnum x11, fixnum y10, f
 #endif
 }
 
-static __device__ void multi_by_a(fixnum mod, fixnum in0, fixnum in1, fixnum &r0, fixnum &r1) {
+static __device__ void multi_by_a(modnum m, fixnum in0, fixnum in1, fixnum &r0, fixnum &r1) {
     // mnt4_twist_mul_by_a_c0 * elt.c0, mnt4_twist_mul_by_a_c1 * elt.c1)
     // mnt4_twist_mul_by_a_c0 = mnt4_G1::coeff_a * mnt4_Fq2::non_residue;
     // mnt4_twist_mul_by_a_c1 = mnt4_G1::coeff_a * mnt4_Fq2::non_residue;
     // mnt4_G1::coeff_a = mnt4_Fq("2");
     // mnt4_Fq2::non_residue = mnt4_Fq("13");
-    typedef modnum_monty_cios<fixnum> modnum;
-    modnum m(mod);
     int an = 26;   //2*13
     fixnum temp;
     temp = in0;
@@ -258,7 +247,7 @@ static __device__ void multi_by_a(fixnum mod, fixnum in0, fixnum in1, fixnum &r0
     } 
 }
 
-static __device__ void p_double(fixnum mod, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum z10, fixnum z11, fixnum &x30, fixnum &x31, fixnum &y30, fixnum &y31, fixnum &z30, fixnum &z31) {
+static __device__ void p_double(modnum m, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum z10, fixnum z11, fixnum &x30, fixnum &x31, fixnum &y30, fixnum &y31, fixnum &z30, fixnum &z31) {
 #if 0
     printf("4g2 q double\n");
     printf("x1, y1, z1\n");
@@ -282,64 +271,64 @@ static __device__ void p_double(fixnum mod, fixnum x10, fixnum x11, fixnum y10, 
     fixnum temp0, temp1;
     // XX  = X1^2 
     fixnum xx0, xx1;
-    fp2_square(mod, x10, x11, xx0, xx1);
+    fp2_square(m, x10, x11, xx0, xx1);
 
     // ZZ  = Z1^2
     fixnum zz0, zz1;
-    fp2_square(mod, z10, z11, zz0, zz1);
+    fp2_square(m, z10, z11, zz0, zz1);
 
     // w   = a*ZZ + 3*XX
     fixnum w0, w1;
-    fp2_add(mod, xx0, xx1, xx0, xx1, w0, w1);
-    fp2_add(mod, xx0, xx1, w0, w1, w0, w1);
-    multi_by_a(mod, zz0, zz1, temp0, temp1);
-    fp2_add(mod, w0, w1, temp0, temp1, w0, w1);
+    fp2_add(m, xx0, xx1, xx0, xx1, w0, w1);
+    fp2_add(m, xx0, xx1, w0, w1, w0, w1);
+    multi_by_a(m, zz0, zz1, temp0, temp1);
+    fp2_add(m, w0, w1, temp0, temp1, w0, w1);
 
     // y1z1
     fixnum y1z10, y1z11;
-    fp2_multi(mod, y10, y11, z10, z11, y1z10, y1z11);
+    fp2_multi(m, y10, y11, z10, z11, y1z10, y1z11);
 
     // s   = 2*Y1*Z1
     fixnum s0, s1;
-    fp2_add(mod, y1z10, y1z11, y1z10, y1z11, s0, s1);
+    fp2_add(m, y1z10, y1z11, y1z10, y1z11, s0, s1);
 
     // ss  = s^2
     fixnum ss0, ss1;
-    fp2_square(mod, s0, s1, ss0, ss1);
+    fp2_square(m, s0, s1, ss0, ss1);
 
     // sss  = s*ss
     fixnum sss0, sss1;
-    fp2_multi(mod, s0, s1, ss0, ss1, sss0, sss1);
+    fp2_multi(m, s0, s1, ss0, ss1, sss0, sss1);
 
     // R   = Y1*s
     fixnum R0, R1;
-    fp2_multi(mod, y10, y11, s0, s1, R0, R1);
+    fp2_multi(m, y10, y11, s0, s1, R0, R1);
 
     // RR  = R^2
     fixnum RR0, RR1;
-    fp2_square(mod, R0, R1, RR0, RR1);
+    fp2_square(m, R0, R1, RR0, RR1);
 
     // B   = (X1+R)^2 - XX - RR
     fixnum B0, B1;
-    fp2_add(mod, x10, x11, R0, R1, temp0, temp1);
-    fp2_square(mod, temp0, temp1, B0, B1);
-    fp2_sub(mod, B0, B1, xx0, xx1, B0, B1); 
-    fp2_sub(mod, B0, B1, RR0, RR1, B0, B1);
+    fp2_add(m, x10, x11, R0, R1, temp0, temp1);
+    fp2_square(m, temp0, temp1, B0, B1);
+    fp2_sub(m, B0, B1, xx0, xx1, B0, B1); 
+    fp2_sub(m, B0, B1, RR0, RR1, B0, B1);
 
     // h   = w^2-2*B
     fixnum h0, h1;
-    fp2_square(mod, w0, w1, h0, h1);
-    fp2_add(mod, B0, B1, B0, B1, temp0, temp1);
-    fp2_sub(mod, h0, h1, temp0, temp1, h0, h1);
+    fp2_square(m, w0, w1, h0, h1);
+    fp2_add(m, B0, B1, B0, B1, temp0, temp1);
+    fp2_sub(m, h0, h1, temp0, temp1, h0, h1);
 
     // X3  = h*s
-    fp2_multi(mod, h0, h1, s0, s1, x30, x31);
+    fp2_multi(m, h0, h1, s0, s1, x30, x31);
 
     // Y3  = w*(B-h) - 2*RR
-    fp2_sub(mod, B0, B1, h0, h1, y30, y31);
-    fp2_multi(mod, w0, w1, y30, y31, y30, y31);
-    fp2_add(mod, RR0, RR1, RR0, RR1, temp0, temp1);
-    fp2_sub(mod, y30, y31, temp0, temp1, y30, y31);
+    fp2_sub(m, B0, B1, h0, h1, y30, y31);
+    fp2_multi(m, w0, w1, y30, y31, y30, y31);
+    fp2_add(m, RR0, RR1, RR0, RR1, temp0, temp1);
+    fp2_sub(m, y30, y31, temp0, temp1, y30, y31);
 
     // Z3  = sss
     z30 = sss0;
