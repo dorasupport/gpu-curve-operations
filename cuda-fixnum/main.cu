@@ -29,8 +29,12 @@ int BLOCK_NUM = 4096;
 // mnt4_q
 const uint8_t mnt4_modulus[MNT_SIZE] = {1,128,94,36,222,99,144,94,159,17,221,44,82,84,157,227,240,37,196,154,113,16,136,99,164,84,114,118,233,204,90,104,56,126,83,203,165,13,15,184,157,5,24,242,118,231,23,177,157,247,90,161,217,36,209,153,141,237,160,232,37,185,253,7,115,216,151,108,249,232,183,94,237,175,143,91,80,151,249,183,173,205,226,238,34,144,34,16,17,196,146,45,198,196,1,0};
 
+__device__ uint8_t mnt4_modulus_d[MNT_SIZE] = {1,128,94,36,222,99,144,94,159,17,221,44,82,84,157,227,240,37,196,154,113,16,136,99,164,84,114,118,233,204,90,104,56,126,83,203,165,13,15,184,157,5,24,242,118,231,23,177,157,247,90,161,217,36,209,153,141,237,160,232,37,185,253,7,115,216,151,108,249,232,183,94,237,175,143,91,80,151,249,183,173,205,226,238,34,144,34,16,17,196,146,45,198,196,1,0};
+
 // mnt6_q
 uint8_t mnt6_modulus[MNT_SIZE] = {1,0,0,64,226,118,7,217,79,58,161,15,23,153,160,78,151,87,0,63,188,129,195,214,164,58,153,52,118,249,223,185,54,38,33,41,148,202,235,62,155,169,89,200,40,92,108,178,157,247,90,161,217,36,209,153,141,237,160,232,37,185,253,7,115,216,151,108,249,232,183,94,237,175,143,91,80,151,249,183,173,205,226,238,34,144,34,16,17,196,146,45,198,196,1,0};
+
+__device__ uint8_t mnt6_modulus_d[MNT_SIZE] = {1,0,0,64,226,118,7,217,79,58,161,15,23,153,160,78,151,87,0,63,188,129,195,214,164,58,153,52,118,249,223,185,54,38,33,41,148,202,235,62,155,169,89,200,40,92,108,178,157,247,90,161,217,36,209,153,141,237,160,232,37,185,253,7,115,216,151,108,249,232,183,94,237,175,143,91,80,151,249,183,173,205,226,238,34,144,34,16,17,196,146,45,198,196,1,0};
 
 template< typename fixnum >
 __device__ void dump(fixnum n, int size) {
@@ -79,10 +83,18 @@ struct mnt4g1_calc_np {
     __device__ void operator()(fixnum mod, fixnum w, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
     typedef modnum_monty_cios<fixnum> modnum;
     typedef mnt4_g1<fixnum> mnt4g1;
-    modnum m(mod);
     fixnum rx, ry, rz;
     int i = 24*32 - 1;
     bool found_one = false;
+
+    __shared__ uint8_t modulus_data[MNT_SIZE];
+    if (threadIdx.x == 0) {
+        memcpy(modulus_data, mnt4_modulus_d, MNT_SIZE);
+    }
+
+    __syncthreads();
+
+    modnum m(*((fixnum *)modulus_data + threadIdx.x % 32));
 #if 0
     if (threadIdx.x > 23) {
         dump(w, 24);
@@ -148,7 +160,15 @@ struct mnt4g2_calc_np {
     __device__ void operator()(fixnum mod, fixnum w, fixnum x10, fixnum x11, fixnum y10, fixnum y11, fixnum z10, fixnum z11, fixnum &x30, fixnum &x31, fixnum &y30, fixnum &y31, fixnum &z30, fixnum &z31) {
     typedef modnum_monty_cios<fixnum> modnum;
     typedef mnt4_g2<fixnum> mnt4g2;
-    modnum m(mod);
+    __shared__ uint8_t modulus_data[MNT_SIZE];
+    if (threadIdx.x == 0) {
+        memcpy(modulus_data, mnt4_modulus_d, MNT_SIZE);
+    }
+
+    __syncthreads();
+
+    modnum m(*((fixnum *)modulus_data + threadIdx.x % 32));
+
     int i = 24*32 - 1;
     bool found_one = false;
     while(i >= 0) {
@@ -181,10 +201,18 @@ struct mnt6g1_calc_np {
     __device__ void operator()(fixnum mod, fixnum w, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
     typedef modnum_monty_cios<fixnum> modnum;
     typedef mnt6_g1<fixnum> mnt6g1;
-    modnum m(mod);
     fixnum rx, ry, rz;
     int i = 24*32 - 1;
     bool found_one = false;
+
+    __shared__ uint8_t modulus_data[MNT_SIZE];
+    if (threadIdx.x == 0) {
+        memcpy(modulus_data, mnt6_modulus_d, MNT_SIZE);
+    }
+
+    __syncthreads();
+
+    modnum m(*((fixnum *)modulus_data + threadIdx.x % 32));
 #if 0
     dump(w, 24);
     dump(x1, 24);
@@ -221,9 +249,17 @@ struct mnt6g2_calc_np {
     __device__ void operator()(fixnum mod, fixnum w, fixnum x10, fixnum x11, fixnum x12, fixnum y10, fixnum y11, fixnum y12, fixnum z10, fixnum z11, fixnum z12, fixnum &x30, fixnum &x31, fixnum &x32, fixnum &y30, fixnum &y31, fixnum &y32, fixnum &z30, fixnum &z31, fixnum &z32) {
     typedef modnum_monty_cios<fixnum> modnum;
     typedef mnt6_g2<fixnum> mnt6g2;
-    modnum m(mod);
     int i = 24*32 - 1;
     bool found_one = false;
+
+    __shared__ uint8_t modulus_data[MNT_SIZE];
+    if (threadIdx.x == 0) {
+        memcpy(modulus_data, mnt6_modulus_d, MNT_SIZE);
+    }
+
+    __syncthreads();
+
+    modnum m(*((fixnum *)modulus_data + threadIdx.x % 32));
 #if 0
     dump(w, 24);
     dump(x10, 24);
