@@ -273,7 +273,7 @@ template< template <typename> class Func, typename... Args >
 void
 fixnum_array<fixnum>::map(Args... args) {
     // TODO: Set this to the number of threads on a single SM on the host GPU.
-    constexpr int BLOCK_SIZE = 256;
+    constexpr int BLOCK_SIZE = 128;
 
     // FIXME: WARPSIZE should come from slot_layout
     constexpr int WARPSIZE = 32;
