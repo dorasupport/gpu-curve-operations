@@ -21,6 +21,8 @@ int BLOCK_NUM = 4096;
 #define PARALLEL_SIGMA
 #define MNT4 1
 #define MNT6 2
+#define WARP_SIZE  32
+#define WARP_DATA_WIDTH 24
 
 #if 1
 #define printf(fmt, ...) (0)
@@ -52,8 +54,9 @@ struct mnt4g1_pq_plus {
         typedef mnt4_g1<fixnum> mnt4g1;
         typedef modnum_monty_cios<fixnum> modnum;
         __shared__ uint8_t modulus_data[MNT_SIZE];
-        if (threadIdx.x == 0) {
-            memcpy(modulus_data, mnt4_modulus_d, MNT_SIZE);
+        if (threadIdx.x < 128) {
+            auto index = threadIdx.x / WARP_SIZE * WARP_DATA_WIDTH + threadIdx.x % WARP_SIZE;
+            modulus_data[index] = mnt4_modulus_d[index];
         }
 
         __syncthreads();
@@ -69,8 +72,9 @@ struct mnt4g2_pq_plus {
         typedef mnt4_g2<fixnum> mnt4g2;
         typedef modnum_monty_cios<fixnum> modnum;
         __shared__ uint8_t modulus_data[MNT_SIZE];
-        if (threadIdx.x == 0) {
-            memcpy(modulus_data, mnt4_modulus_d, MNT_SIZE);
+        if (threadIdx.x < 128) {
+            auto index = threadIdx.x / WARP_SIZE * WARP_DATA_WIDTH + threadIdx.x % WARP_SIZE;
+            modulus_data[index] = mnt4_modulus_d[index];
         }
 
         __syncthreads();
@@ -86,8 +90,9 @@ struct mnt6g1_pq_plus {
         typedef mnt6_g1<fixnum> mnt6g1;
         typedef modnum_monty_cios<fixnum> modnum;
         __shared__ uint8_t modulus_data[MNT_SIZE];
-        if (threadIdx.x == 0) {
-            memcpy(modulus_data, mnt6_modulus_d, MNT_SIZE);
+        if (threadIdx.x < 128) {
+            auto index = threadIdx.x / WARP_SIZE * WARP_DATA_WIDTH + threadIdx.x % WARP_SIZE;
+            modulus_data[index] = mnt6_modulus_d[index];
         }
 
         __syncthreads();
@@ -103,8 +108,9 @@ struct mnt6g2_pq_plus {
         typedef mnt6_g2<fixnum> mnt6g2;
         typedef modnum_monty_cios<fixnum> modnum;
         __shared__ uint8_t modulus_data[MNT_SIZE];
-        if (threadIdx.x == 0) {
-            memcpy(modulus_data, mnt6_modulus_d, MNT_SIZE);
+        if (threadIdx.x < 128) {
+            auto index = threadIdx.x / WARP_SIZE * WARP_DATA_WIDTH + threadIdx.x % WARP_SIZE;
+            modulus_data[index] = mnt6_modulus_d[index];
         }
 
         __syncthreads();
@@ -125,8 +131,9 @@ struct mnt4g1_calc_np {
     bool found_one = false;
 
     __shared__ uint8_t modulus_data[MNT_SIZE];
-    if (threadIdx.x == 0) {
-        memcpy(modulus_data, mnt4_modulus_d, MNT_SIZE);
+    if (threadIdx.x < 128) {
+        auto index = threadIdx.x / WARP_SIZE * WARP_DATA_WIDTH + threadIdx.x % WARP_SIZE;
+        modulus_data[index] = mnt4_modulus_d[index];
     }
 
     __syncthreads();
@@ -202,8 +209,9 @@ struct mnt4g2_calc_np {
     typedef modnum_monty_cios<fixnum> modnum;
     typedef mnt4_g2<fixnum> mnt4g2;
     __shared__ uint8_t modulus_data[MNT_SIZE];
-    if (threadIdx.x == 0) {
-        memcpy(modulus_data, mnt4_modulus_d, MNT_SIZE);
+    if (threadIdx.x < 128) {
+        auto index = threadIdx.x / WARP_SIZE * WARP_DATA_WIDTH + threadIdx.x % WARP_SIZE;
+        modulus_data[index] = mnt4_modulus_d[index];
     }
 
     __syncthreads();
@@ -252,8 +260,9 @@ struct mnt6g1_calc_np {
     bool found_one = false;
 
     __shared__ uint8_t modulus_data[MNT_SIZE];
-    if (threadIdx.x == 0) {
-        memcpy(modulus_data, mnt6_modulus_d, MNT_SIZE);
+    if (threadIdx.x < 128) {
+        auto index = threadIdx.x / WARP_SIZE * WARP_DATA_WIDTH + threadIdx.x % WARP_SIZE;
+        modulus_data[index] = mnt6_modulus_d[index];
     }
 
     __syncthreads();
@@ -299,8 +308,9 @@ struct mnt6g2_calc_np {
     bool found_one = false;
 
     __shared__ uint8_t modulus_data[MNT_SIZE];
-    if (threadIdx.x == 0) {
-        memcpy(modulus_data, mnt6_modulus_d, MNT_SIZE);
+    if (threadIdx.x < 128) {
+        auto index = threadIdx.x / WARP_SIZE * WARP_DATA_WIDTH + threadIdx.x % WARP_SIZE;
+        modulus_data[index] = mnt6_modulus_d[index];
     }
 
     __syncthreads();
