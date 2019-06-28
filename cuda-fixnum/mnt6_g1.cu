@@ -25,7 +25,8 @@ static __device__ void dump(fixnum n, int size) {
 	printf("dump [%d]=\%x\n", threadIdx.x, fixnum::get(n, threadIdx.x));
 }
 
-static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
+typedef modnum_monty_cios<fixnum> modnum;
+static __device__ void pq_plus(modnum m, fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
 #if 0
     printf("pq plus\n");
     dump(x1, 24);
@@ -43,8 +44,6 @@ static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixn
         z3 = z1;
         return;
     }
-    typedef modnum_monty_cios<fixnum> modnum;
-    modnum m(mod);
     fixnum y1z2, x1z2, z1z2, y2z1, x2z1;
 
     // x1z2
@@ -60,7 +59,7 @@ static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixn
     m.mul(y2z1, y2, z1);
 
     if (fixnum::cmp(x1z2, x2z1) == 0 && fixnum::cmp(y1z2, y2z1) == 0) {
-        p_double(mod, x1, y1, z1, x3, y3, z3);
+        p_double(m, x1, y1, z1, x3, y3, z3);
         return;
     }
     // z1z2
@@ -117,7 +116,7 @@ static __device__ void pq_plus(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixn
 #endif
 }
 
-static __device__ void p_double(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
+static __device__ void p_double(modnum m, fixnum x1, fixnum y1, fixnum z1, fixnum &x3, fixnum &y3, fixnum &z3) {
 #if 0
     printf("p double\n");
     dump(x1, 24);
@@ -128,8 +127,6 @@ static __device__ void p_double(fixnum mod, fixnum x1, fixnum y1, fixnum z1, fix
         z3 = z1;
         return;
     }
-    typedef modnum_monty_cios<fixnum> modnum;
-    modnum m(mod);
 
     fixnum XX;
     // XX = X1*X1
