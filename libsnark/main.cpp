@@ -1,304 +1,93 @@
-#include <cassert>
 #include <cstdio>
-#include <fstream>
-#include <fstream>
-#include <libff/common/rng.hpp>
-#include <libff/common/profiling.hpp>
-#include <libff/common/utils.hpp>
-#include <libsnark/serialization.hpp>
+#include <vector>
+
 #include <libff/algebra/curves/mnt753/mnt4753/mnt4753_pp.hpp>
-#include <libff/algebra/curves/mnt753/mnt6753/mnt6753_pp.hpp>
-#include <omp.h>
-#include <libff/algebra/scalar_multiplication/multiexp.hpp>
-#include <libsnark/knowledge_commitment/kc_multiexp.hpp>
-#include <libsnark/knowledge_commitment/knowledge_commitment.hpp>
-#include <libsnark/reductions/r1cs_to_qap/r1cs_to_qap.hpp>
-
-#include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
-
-#include <libfqfft/evaluation_domain/domains/basic_radix2_domain.hpp>
+#include <libff/algebra/curves/mnt753/mnt4753/mnt4753_init.hpp>
+#include "cuda-fixnum/main.cuh"
 
 using namespace libff;
-using namespace libsnark;
 
-const multi_exp_method method = multi_exp_method_BDLO12;
-// const multi_exp_method method = multi_exp_method_bos_coster;
-
-template<typename ppT>
-class groth16_parameters {
-  public:
-    size_t d;
-    size_t m;
-    std::vector<G1<ppT>> A, B1, L, H;
-    std::vector<G2<ppT>> B2;
-
-  groth16_parameters(const char* path) {
-    FILE* params = fopen(path, "r");
-    d = read_size_t(params);
-    m = read_size_t(params);
-    for (size_t i = 0; i <= m; ++i) { A.emplace_back(read_g1<ppT>(params)); }
-    for (size_t i = 0; i <= m; ++i) { B1.emplace_back(read_g1<ppT>(params)); }
-    for (size_t i = 0; i <= m; ++i) { B2.emplace_back(read_g2<ppT>(params)); }
-    for (size_t i = 0; i < m-1; ++i) { L.emplace_back(read_g1<ppT>(params)); }
-    for (size_t i = 0; i < d; ++i) { H.emplace_back(read_g1<ppT>(params)); }
-    fclose(params);
-  }
-};
-
-template<typename ppT>
-class groth16_input {
-  public:
-    std::vector<Fr<ppT>> w;
-    std::vector<Fr<ppT>> ca, cb, cc;
-    Fr<ppT> r;
-
-  groth16_input(const char* path, size_t d, size_t m) {
-    FILE* inputs = fopen(path, "r");
-
-    for (size_t i = 0; i < m + 1; ++i) { w.emplace_back(read_fr<ppT>(inputs)); }
-
-    for (size_t i = 0; i < d + 1; ++i) { ca.emplace_back(read_fr<ppT>(inputs)); }
-    for (size_t i = 0; i < d + 1; ++i) { cb.emplace_back(read_fr<ppT>(inputs)); }
-    for (size_t i = 0; i < d + 1; ++i) { cc.emplace_back(read_fr<ppT>(inputs)); }
-
-    r = read_fr<ppT>(inputs);
-
-    fclose(inputs);
-  }
-};
-
-template<typename ppT>
-class groth16_output {
-  public:
-    G1<ppT> A, C;
-    G2<ppT> B;
-
-  groth16_output(G1<ppT> &&A, G2<ppT> &&B, G1<ppT> &&C) :
-    A(std::move(A)), B(std::move(B)), C(std::move(C)) {}
-
-  void write(const char* path) {
-    FILE* out = fopen(path, "w");
-    write_g1<ppT>(out, A);
-    write_g2<ppT>(out, B);
-    write_g1<ppT>(out, C);
-    fclose(out);
-  }
-};
-
-// Here is where all the FFTs happen.
-template<typename ppT>
-std::vector<Fr<ppT>> compute_H(
-    size_t d,
-    std::vector<Fr<ppT>> &ca,
-    std::vector<Fr<ppT>> &cb,
-    std::vector<Fr<ppT>> &cc)
-{
-    // Begin witness map
-    libff::enter_block("Compute the polynomial H");
-
-    const std::shared_ptr<libfqfft::evaluation_domain<Fr<ppT>> > domain = libfqfft::get_evaluation_domain<Fr<ppT>>(d + 1);
-
-    domain->iFFT(ca);
-    domain->iFFT(cb);
-
-    domain->cosetFFT(ca, Fr<ppT>::multiplicative_generator);
-    domain->cosetFFT(cb, Fr<ppT>::multiplicative_generator);
-
-    libff::enter_block("Compute evaluation of polynomial H on set T");
-    std::vector<Fr<ppT>> &H_tmp = ca; // can overwrite ca because it is not used later
-#ifdef MULTICORE
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < domain->m; ++i)
-    {
-        H_tmp[i] = ca[i]*cb[i];
-    }
-    std::vector<Fr<ppT>>().swap(cb); // destroy cb
-
-    domain->iFFT(cc);
-
-    domain->cosetFFT(cc, Fr<ppT>::multiplicative_generator);
-
-#ifdef MULTICORE
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < domain->m; ++i)
-    {
-        H_tmp[i] = (H_tmp[i]-cc[i]);
-    }
-
-    domain->divide_by_Z_on_coset(H_tmp);
-
-    libff::leave_block("Compute evaluation of polynomial H on set T");
-
-    domain->icosetFFT(H_tmp, Fr<ppT>::multiplicative_generator);
-
-    std::vector<Fr<ppT>> coefficients_for_H(domain->m+1, Fr<ppT>::zero());
-#ifdef MULTICORE
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < domain->m; ++i)
-    {
-        coefficients_for_H[i] = H_tmp[i];
-    }
-
-    libff::leave_block("Compute the polynomial H");
-
-    return coefficients_for_H;
+Fq<mnt4753_pp> read_mnt4_fq(FILE* input) {
+  // bigint<mnt4753_q_limbs> n;
+  Fq<mnt4753_pp> x;
+  fread((void *) x.mont_repr.data, libff::mnt4753_q_limbs * sizeof(mp_size_t), 1, input);
+  return x;
 }
 
-template<typename G, typename Fr>
-G multiexp(typename std::vector<Fr>::const_iterator scalar_start,
-           typename std::vector<G>::const_iterator g_start,
-           size_t length)
-{
-#ifdef MULTICORE
-    const size_t chunks = omp_get_max_threads(); // to override, set OMP_NUM_THREADS env var or call omp_set_num_threads()
-#else
-    const size_t chunks = 1;
-#endif
-
-    return libff::multi_exp_with_mixed_addition<G,
-                                                Fr,
-                                                method>(
-        g_start,
-        g_start + length,
-        scalar_start,
-        scalar_start + length,
-        chunks);
-
+void write_mnt4_fq(FILE* output, Fq<mnt4753_pp> x) {
+  fwrite((void *) x.mont_repr.data, libff::mnt4753_q_limbs * sizeof(mp_size_t), 1, output);
 }
 
-template<typename ppT>
-int run_prover(
-    const char* params_path,
-    const char* input_path,
-    const char* output_path)
+Fqe<mnt4753_pp> read_mnt4_fq2(FILE* input) {
+  Fq<mnt4753_pp> c0 = read_mnt4_fq(input);
+  Fq<mnt4753_pp> c1 = read_mnt4_fq(input);
+  return Fqe<mnt4753_pp>(c0, c1);
+}
+
+void write_mnt4_fq2(FILE* output, Fqe<mnt4753_pp> x) {
+  write_mnt4_fq(output, x.c0);
+  write_mnt4_fq(output, x.c1);
+}
+
+// The actual code for doing Fq2 multiplication lives in libff/algebra/fields/fp2.tcc
+int main(int argc, char *argv[])
 {
-    ppT::init_public_params();
+    // argv should be
+    // { "main", "compute" or "compute-numeral", inputs, outputs }
 
-    const size_t primary_input_size = 1;
+    mnt4753_pp::init_public_params();
 
-    const groth16_parameters<ppT> parameters(params_path);
-    const groth16_input<ppT> input(input_path, parameters.d, parameters.m);
+    auto inputs = fopen(argv[2], "r");
+    auto outputs = fopen(argv[3], "w");
 
-    std::vector<Fr<ppT>> w  = std::move(input.w);
-    std::vector<Fr<ppT>> ca = std::move(input.ca);
-    std::vector<Fr<ppT>> cb = std::move(input.cb);
-    std::vector<Fr<ppT>> cc = std::move(input.cc);
+    auto read_mnt4 = read_mnt4_fq;
+    auto write_mnt4 = write_mnt4_fq;
+    auto read_mnt4_q2 = read_mnt4_fq2;
+    auto write_mnt4_q2 = write_mnt4_fq2;
 
-    // End reading of parameters and input
+    while (true) {
+      size_t n;
+      size_t elts_read = fread((void *) &n, sizeof(size_t), 1, inputs);
 
-    libff::enter_block("Call to r1cs_gg_ppzksnark_prover");
+      if (elts_read == 0) { break; }
+      size_t data_size = n * 96;
 
-    std::vector<Fr<ppT>> coefficients_for_H = compute_H<ppT>(
-        parameters.d,
-        ca, cb, cc);
+      uint8_t *x1buf = new uint8_t[data_size];
+      uint8_t *x2buf = new uint8_t[data_size];
+      uint8_t *y1buf = new uint8_t[data_size];
+      uint8_t *y2buf = new uint8_t[data_size];
+      uint8_t *out1buf = new uint8_t[data_size];
+      uint8_t *out2buf = new uint8_t[data_size];
+      size_t offset = 0;
+      for (int i = 0; i < n; i++) {
+          fread(x1buf + offset, 96, 1, inputs); 
+          fread(x2buf + offset, 96, 1, inputs); 
+          offset += 96;
+      }
+      offset = 0;
+      for (int i = 0; i < n; i++) {
+          fread(y1buf + offset, 96, 1, inputs); 
+          fread(y2buf + offset, 96, 1, inputs); 
+          offset += 96;
+      }
 
-    libff::enter_block("Compute the proof");
-    libff::enter_block("Multi-exponentiations");
+      mnt4_g2_mul(n, x1buf, x2buf, y1buf, y2buf, out1buf, out2buf);
 
-    // Now the 5 multi-exponentiations
-    G1<ppT> evaluation_At = multiexp<G1<ppT>, Fr<ppT>>(
-        w.begin(), parameters.A.begin(), parameters.m + 1);
+      offset = 0;
+      for (int i = 0; i < n; i++) {
+          fwrite(out1buf + offset, 96, 1, outputs);
+          fwrite(out2buf + offset, 96, 1, outputs);
+          offset += 96;
+      }
+      delete x1buf;
+      delete x2buf;
+      delete y1buf;
+      delete y2buf;
+      delete out1buf;
+      delete out2buf;
+    }
+    fclose(outputs);
 
-    G1<ppT> evaluation_Bt1 = multiexp<G1<ppT>, Fr<ppT>>(
-        w.begin(), parameters.B1.begin(), parameters.m + 1);
-
-    G2<ppT> evaluation_Bt2 = multiexp<G2<ppT>, Fr<ppT>>(
-        w.begin(), parameters.B2.begin(), parameters.m + 1);
-
-    G1<ppT> evaluation_Ht = multiexp<G1<ppT>, Fr<ppT>>(
-        coefficients_for_H.begin(), parameters.H.begin(), parameters.d);
-
-    G1<ppT> evaluation_Lt = multiexp<G1<ppT>, Fr<ppT>>(
-        w.begin() + primary_input_size + 1,
-        parameters.L.begin(),
-        parameters.m - 1);
-
-    libff::G1<ppT> C = evaluation_Ht + evaluation_Lt + input.r * evaluation_Bt1; /*+ s *  g1_A  - (r * s) * pk.delta_g1; */
-
-    libff::leave_block("Multi-exponentiations");
-    libff::leave_block("Compute the proof");
-    libff::leave_block("Call to r1cs_gg_ppzksnark_prover");
-
-    groth16_output<ppT> output(
-      std::move(evaluation_At),
-      std::move(evaluation_Bt2),
-      std::move(C));
-
-    output.write(output_path);
 
     return 0;
-}
-
-int main(int argc, const char * argv[])
-{
-  setbuf(stdout, NULL);
-  std::string curve(argv[1]);
-  std::string mode(argv[2]);
-
-  const char* params_path = argv[3];
-  const char* input_path = argv[4];
-  const char* output_path = argv[5];
-
-  if (curve == "MNT4753") {
-    if (mode == "compute") {
-      return run_prover<mnt4753_pp>(params_path, input_path, output_path);
-    }
-  } else if (curve == "MNT6753") {
-    if (mode == "compute") {
-      return run_prover<mnt6753_pp>(params_path, input_path, output_path);
-    }
-  }
-}
-
-template<typename ppT>
-void debug(
-    Fr<ppT>& r,
-    groth16_output<ppT>& output,
-    std::vector<Fr<ppT>>& w) {
-
-    const size_t primary_input_size = 1;
-
-    std::vector<Fr<ppT>> primary_input(w.begin() + 1, w.begin() + 1 + primary_input_size);
-    std::vector<Fr<ppT>> auxiliary_input(w.begin() + 1 + primary_input_size, w.end() );
-
-    const libff::Fr<ppT> s = libff::Fr<ppT>::random_element();
-
-    r1cs_gg_ppzksnark_proving_key<ppT> pk;
-    std::ifstream pk_debug;
-    pk_debug.open("proving-key.debug");
-    pk_debug >> pk;
-
-    /* A = alpha + sum_i(a_i*A_i(t)) + r*delta */
-    libff::G1<ppT> g1_A = pk.alpha_g1 + output.A + r * pk.delta_g1;
-
-    /* B = beta + sum_i(a_i*B_i(t)) + s*delta */
-    libff::G2<ppT> g2_B = pk.beta_g2 + output.B + s * pk.delta_g2;
-
-    /* C = sum_i(a_i*((beta*A_i(t) + alpha*B_i(t) + C_i(t)) + H(t)*Z(t))/delta) + A*s + r*b - r*s*delta */
-    libff::G1<ppT> g1_C = output.C + s * g1_A + r * pk.beta_g1;
-
-    libff::leave_block("Compute the proof");
-
-    libff::leave_block("Call to r1cs_gg_ppzksnark_prover");
-
-    r1cs_gg_ppzksnark_proof<ppT> proof = r1cs_gg_ppzksnark_proof<ppT>(std::move(g1_A), std::move(g2_B), std::move(g1_C));
-    proof.print_size();
-
-    r1cs_gg_ppzksnark_verification_key<ppT> vk;
-    std::ifstream vk_debug;
-    vk_debug.open("verification-key.debug");
-    vk_debug >> vk;
-    vk_debug.close();
-
-    assert (r1cs_gg_ppzksnark_verifier_strong_IC<ppT>(vk, primary_input, proof) );
-
-    r1cs_gg_ppzksnark_proof<ppT> proof1=
-      r1cs_gg_ppzksnark_prover<ppT>(
-          pk, 
-          primary_input,
-          auxiliary_input);
-    assert (r1cs_gg_ppzksnark_verifier_strong_IC<ppT>(vk, primary_input, proof1) );
 }
