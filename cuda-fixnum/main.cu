@@ -1630,7 +1630,8 @@ int mnt6_g2_mul(int nelts, uint8_t *x1, uint8_t *x2, uint8_t *x3, uint8_t *y1, u
     return 0;
 }
 
-int mnt4_g1_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, uint8_t *y3, uint8_t *z3) { 
+template <template <typename> class PQ_plus>
+int g1_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, uint8_t *y3, uint8_t *z3) { 
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
     
@@ -1653,7 +1654,7 @@ int mnt4_g1_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, ui
     ry = new uint8_t[MNT_SIZE*rnelts/2];
     rz = new uint8_t[MNT_SIZE*rnelts/2];
     while(rnelts > 1) {
-        do_sigma<mnt4g1_pq_plus>(rnelts, x1bytes + start*MNT_SIZE, y1bytes + start*MNT_SIZE, z1bytes + start*MNT_SIZE, rx, ry, rz);
+        do_sigma<PQ_plus>(rnelts, x1bytes + start*MNT_SIZE, y1bytes + start*MNT_SIZE, z1bytes + start*MNT_SIZE, rx, ry, rz);
         rnelts = rnelts >> 1;
         memcpy(x1bytes + start*MNT_SIZE, rx, rnelts*MNT_SIZE);
         memcpy(y1bytes + start*MNT_SIZE, ry, rnelts*MNT_SIZE);
@@ -1698,8 +1699,12 @@ int mnt4_g1_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, ui
     return 0;
 }
 
-int mnt6_g1_sigma(int n, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *outx, uint8_t *outy, uint8_t *outz) {
-    return 0;
+int mnt4_g1_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, uint8_t *y3, uint8_t *z3) { 
+    return g1_sigma<mnt4g1_pq_plus>(nelts, x, y, z, x3, y3, z3); 
+}
+
+int mnt6_g1_sigma(int n, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+    return g1_sigma<mnt6g1_pq_plus>(n, x, y, z, x3, y3, z3); 
 }
 
 int mnt4_g2_sigma(int n, uint8_t *x10, uint8_t *x11, uint8_t *y10, uint8_t *y11, uint8_t *z10, uint8_t *z11, uint8_t *outx, uint8_t *outy, uint8_t *outz) {

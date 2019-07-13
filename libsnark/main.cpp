@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
       if (elts_read == 0) { break; }
       printf("n %d\n", n);
       size_t esize = 96;
-      size_t data_size = n * esize;
+      size_t data_size = n * 3 * esize;
 
       uint8_t *x1buf = new uint8_t[data_size];
       uint8_t *x2buf = new uint8_t[data_size];
@@ -175,6 +175,8 @@ int main(int argc, char *argv[])
       uint8_t *outybuf = new uint8_t[3*esize];
       uint8_t *outzbuf = new uint8_t[3*esize];
 
+
+      // mnt4753 g1
       size_t offset = 0;
       for (int i = 0; i < n; i++) {
           fread(x1buf + offset, esize, 1, inputs); 
@@ -182,16 +184,53 @@ int main(int argc, char *argv[])
           memcpy(z1buf + offset, Fq<mnt4753_pp>::one().mont_repr.data, esize);
           offset += esize;
       }
-
       mnt4_g1_sigma(n, x1buf, y1buf, z1buf, outxbuf, outybuf, outzbuf);
-
-      bigint<mnt4753_q_limbs> bigint_x, bigint_y, bigint_z;
-      setBigData(&bigint_x, outxbuf, esize);
-      setBigData(&bigint_y, outybuf, esize);
-      setBigData(&bigint_z, outzbuf, esize);
-
-      G1<mnt4753_pp> g_41 = G1<mnt4753_pp>(bigint_x, bigint_y, bigint_z);
+      bigint<mnt4753_q_limbs> g41x, g41y, g41z;
+      setBigData(&g41x, outxbuf, esize);
+      setBigData(&g41y, outybuf, esize);
+      setBigData(&g41z, outzbuf, esize);
+      G1<mnt4753_pp> g_41 = G1<mnt4753_pp>(g41x, g41y, g41z);
       write_mnt4_g1(outputs, g_41);
+
+      // mnt4753 g2
+      offset = 0;
+      for (int i = 0; i < n; i++) {
+          fread(x1buf + offset, esize, 1, inputs); 
+          fread(x2buf + offset, esize, 1, inputs); 
+          fread(y1buf + offset, esize, 1, inputs); 
+          fread(y2buf + offset, esize, 1, inputs); 
+          memcpy(z1buf + offset, Fqe<mnt4753_pp>::one().c0.mont_repr.data, esize);
+          memcpy(z2buf + offset, Fqe<mnt4753_pp>::one().c1.mont_repr.data, esize);
+          offset += 2 * esize;
+      }
+#if 0
+      mnt4_g1_sigma(n, x1buf, y1buf, z1buf, outxbuf, outybuf, outzbuf);
+      bigint<mnt4753_q_limbs> g41x, g41y, g41z;
+      setBigData(&g41x, outxbuf, esize);
+      setBigData(&g41y, outybuf, esize);
+      setBigData(&g41z, outzbuf, esize);
+      G1<mnt4753_pp> g_41 = G1<mnt4753_pp>(g41x, g41y, g41z);
+      write_mnt4_g1(outputs, g_41);
+#endif
+
+      // mnt6753 g1
+      offset = 0;
+      for (int i = 0; i < n; i++) {
+          fread(x1buf + offset, esize, 1, inputs); 
+          fread(y1buf + offset, esize, 1, inputs); 
+          memcpy(z1buf + offset, Fq<mnt6753_pp>::one().mont_repr.data, esize);
+          offset += esize;
+      }
+      mnt6_g1_sigma(n, x1buf, y1buf, z1buf, outxbuf, outybuf, outzbuf);
+      bigint<mnt6753_q_limbs> g61x, g61y, g61z;
+      setBigData(&g61x, outxbuf, esize);
+      setBigData(&g61y, outybuf, esize);
+      setBigData(&g61z, outzbuf, esize);
+      G1<mnt6753_pp> g_61 = G1<mnt6753_pp>(g61x, g61y, g61z);
+      write_mnt6_g1(outputs, g_61);
+
+
+
       
       delete x1buf;
       delete x2buf;
