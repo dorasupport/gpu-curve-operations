@@ -16,7 +16,7 @@ namespace MNT_G{
 template< typename fixnum >
 class mnt4_g1 {
 public:
-__device__ void dump(fixnum n, int size) {
+static __device__ void dump(fixnum n, int size) {
 #if 0
 	for (int i = 0; i < size; i++) {
 		printf("DUMP [%d] %x\n", i, fixnum::get(n, i));
@@ -45,13 +45,13 @@ static __device__ void pq_plus(modnum m, fixnum x1, fixnum y1, fixnum z1, fixnum
     m.mul(x1z2, x1, z2);
 
     // x2z1
-    m.mul(x2z1, x2, z1);
+    m.mul(x2z1, z1, x2);
 
     // y1z2
     m.mul(y1z2, y1, z2);
 
     // y2z1
-    m.mul(y2z1, y2, z1);
+    m.mul(y2z1, z1, y2);
 
     if (fixnum::cmp(x1z2, x2z1) == 0 && fixnum::cmp(y1z2, y2z1) == 0) {
         p_double(m, x1, y1, z1, x3, y3, z3);

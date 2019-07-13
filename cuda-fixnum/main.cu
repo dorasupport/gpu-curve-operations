@@ -61,6 +61,7 @@ struct mnt4g1_pq_plus {
         __syncthreads();
 
         modnum m(*((fixnum *)modulus_data + threadIdx.x % 32));
+
         mnt4g1::pq_plus(m, x1, y1, z1, x2, y2, z2, x3, y3, z3);
   }
 };
@@ -431,6 +432,13 @@ inline void do_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *rx,
     y2in = fixnum_array::create(y + half_bytes, half_bytes, MNT_SIZE);
     z2in = fixnum_array::create(z + half_bytes, half_bytes, MNT_SIZE);
 
+#if 1
+    uint8_t *temp = z;
+    for (int i = 0; i < 96*nelts; i++) {
+        printf("%02x", temp[i]);
+    }
+    printf("\n");
+#endif
     rx3 = fixnum_array::create(nelts/2);
     ry3 = fixnum_array::create(nelts/2);
     rz3 = fixnum_array::create(nelts/2);
@@ -1627,6 +1635,12 @@ int mnt4_g1_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, ui
     typedef fixnum_array<fixnum> fixnum_array;
     
     size_t fn_bytes = 96;
+    if (nelts == 1) {
+        memcpy(x3, x, fn_bytes);
+        memcpy(y3, y, fn_bytes);
+        memcpy(z3, z, fn_bytes);
+        return 0;
+    }
     size_t step_bytes = MNT_SIZE * nelts;
     fixnum_array *x2in, *y2in, *z2in;
     int start = nelts%2;
@@ -1681,13 +1695,6 @@ int mnt4_g1_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, ui
         memcpy(y3, y1bytes, fn_bytes);
         memcpy(z3, z1bytes, fn_bytes);
     }
-    
-    delete x1bytes;
-    delete y1bytes;
-    delete z1bytes;
-    delete rx;
-    delete ry;
-    delete rz;
     return 0;
 }
 

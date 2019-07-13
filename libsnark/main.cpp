@@ -158,6 +158,7 @@ int main(int argc, char *argv[])
       size_t elts_read = fread((void *) &n, sizeof(size_t), 1, inputs);
 
       if (elts_read == 0) { break; }
+      printf("n %d\n", n);
       size_t esize = 96;
       size_t data_size = n * esize;
 
@@ -177,15 +178,7 @@ int main(int argc, char *argv[])
       size_t offset = 0;
       for (int i = 0; i < n; i++) {
           fread(x1buf + offset, esize, 1, inputs); 
-          offset += esize;
-      }
-      offset = 0;
-      for (int i = 0; i < n; i++) {
           fread(y1buf + offset, esize, 1, inputs); 
-          offset += esize;
-      }
-      offset = 0;
-      for (int i = 0; i < n; i++) {
           memcpy(z1buf + offset, Fq<mnt4753_pp>::one().mont_repr.data, esize);
           offset += esize;
       }
@@ -209,6 +202,7 @@ int main(int argc, char *argv[])
       delete outxbuf;
       delete outybuf;
       delete outzbuf;
+     break;
     }
     fclose(outputs);
 
