@@ -415,6 +415,7 @@ int mnt4_g1_pq_plus(int n, uint8_t* x1, uint8_t* y1, uint8_t* z1, uint8_t* x2, u
     return 0;
 }
 
+// g1 sigma
 template <template <typename> class PQ_plus>
 inline void do_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *rx, uint8_t *ry, uint8_t *rz) {
     typedef warp_fixnum<96, u32_fixnum> fixnum;
@@ -450,6 +451,7 @@ inline void do_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *rx,
     delete rz3;
 }
 
+//mnt6 g2 sigma
 inline void do_sigma(int nelts, uint8_t *x0, uint8_t *x1, uint8_t *x2, uint8_t *y0, uint8_t *y1, uint8_t *y2, uint8_t *z0, uint8_t *z1, uint8_t *z2, uint8_t *rx0, uint8_t *rx1, uint8_t *rx2, uint8_t *ry0, uint8_t *ry1, uint8_t *ry2, uint8_t *rz0, uint8_t *rz1, uint8_t *rz2) {
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
@@ -756,6 +758,7 @@ int mnt6_g1_do_calc_np_sigma(int n, uint8_t* scalar, uint8_t* x1, uint8_t* y1, u
     return 0;
 }
 
+// mnt4 g2 sigma
 inline void do_sigma(int nelts, uint8_t *x0, uint8_t *x1, uint8_t *y0, uint8_t *y1, uint8_t *z0, uint8_t *z1, uint8_t *rx0, uint8_t *rx1, uint8_t *ry0, uint8_t *ry1, uint8_t *rz0, uint8_t *rz1) {
     typedef warp_fixnum<96, u32_fixnum> fixnum;
     typedef fixnum_array<fixnum> fixnum_array;
@@ -1616,5 +1619,86 @@ int mnt6_g2_mul(int nelts, uint8_t *x1, uint8_t *x2, uint8_t *x3, uint8_t *y1, u
         delete dr3;
     }
 
+    return 0;
+}
+
+int mnt4_g1_sigma(int nelts, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *x3, uint8_t *y3, uint8_t *z3) { 
+    typedef warp_fixnum<96, u32_fixnum> fixnum;
+    typedef fixnum_array<fixnum> fixnum_array;
+    
+    size_t fn_bytes = 96;
+    size_t step_bytes = MNT_SIZE * nelts;
+    fixnum_array *x2in, *y2in, *z2in;
+    int start = nelts%2;
+    int rnelts = nelts - start;
+    uint8_t *rx, *ry, *rz;
+    uint8_t *x1bytes = x;
+    uint8_t *y1bytes = y;
+    uint8_t *z1bytes = z;
+    rx = new uint8_t[MNT_SIZE*rnelts/2];
+    ry = new uint8_t[MNT_SIZE*rnelts/2];
+    rz = new uint8_t[MNT_SIZE*rnelts/2];
+    while(rnelts > 1) {
+        do_sigma<mnt4g1_pq_plus>(rnelts, x1bytes + start*MNT_SIZE, y1bytes + start*MNT_SIZE, z1bytes + start*MNT_SIZE, rx, ry, rz);
+        rnelts = rnelts >> 1;
+        memcpy(x1bytes + start*MNT_SIZE, rx, rnelts*MNT_SIZE);
+        memcpy(y1bytes + start*MNT_SIZE, ry, rnelts*MNT_SIZE);
+        memcpy(z1bytes + start*MNT_SIZE, rz, rnelts*MNT_SIZE);
+        if (rnelts > 1 && rnelts%2) {
+            if (start == 0) {
+                start = 1;
+                rnelts -= 1;
+            } else {
+                start = 0;
+                rnelts += 1;
+            }
+        }
+    }
+    delete rx;
+    delete ry;
+    delete rz;
+    if (start == 1) {
+        // add the first element
+        fixnum_array *rx3, *ry3, *rz3;
+        x2in = fixnum_array::create(x1bytes, fn_bytes, fn_bytes);
+        y2in = fixnum_array::create(y1bytes, fn_bytes, fn_bytes);
+        z2in = fixnum_array::create(z1bytes, fn_bytes, fn_bytes);
+        rx3 = fixnum_array::create(x1bytes + fn_bytes, fn_bytes, fn_bytes);
+        ry3 = fixnum_array::create(y1bytes + fn_bytes, fn_bytes, fn_bytes);
+        rz3 = fixnum_array::create(z1bytes + fn_bytes, fn_bytes, fn_bytes);
+        fixnum_array::template map<mnt4g1_pq_plus>(x2in, y2in, z2in, rx3, ry3, rz3, rx3, ry3, rz3);
+        memcpy(x3, rx3, fn_bytes);
+        memcpy(y3, ry3, fn_bytes);
+        memcpy(z3, rz3, fn_bytes);
+        delete x2in;
+        delete y2in;
+        delete z2in;
+        delete rx3;
+        delete ry3;
+        delete rz3;
+    } else {
+        memcpy(x3, x1bytes, fn_bytes);
+        memcpy(y3, y1bytes, fn_bytes);
+        memcpy(z3, z1bytes, fn_bytes);
+    }
+    
+    delete x1bytes;
+    delete y1bytes;
+    delete z1bytes;
+    delete rx;
+    delete ry;
+    delete rz;
+    return 0;
+}
+
+int mnt6_g1_sigma(int n, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *outx, uint8_t *outy, uint8_t *outz) {
+    return 0;
+}
+
+int mnt4_g2_sigma(int n, uint8_t *x10, uint8_t *x11, uint8_t *y10, uint8_t *y11, uint8_t *z10, uint8_t *z11, uint8_t *outx, uint8_t *outy, uint8_t *outz) {
+    return 0;
+}
+
+int mnt6_g2_sigma(int n, uint8_t *x10, uint8_t *x11, uint8_t *x12, uint8_t *y10, uint8_t *y11, uint8_t *y12, uint8_t *z10, uint8_t *z11, uint8_t *z12, uint8_t *outx, uint8_t *outy, uint8_t *outz) {
     return 0;
 }
