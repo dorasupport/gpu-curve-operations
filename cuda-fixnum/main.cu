@@ -100,6 +100,23 @@ struct mnt4g2_multi {
 };
 
 template< typename fixnum >
+struct mnt6g2_multi {
+    __device__ void operator()(fixnum x1, fixnum x2, fixnum x3, fixnum y1, fixnum y2, fixnum y3, fixnum &r1, fixnum &r2, fixnum &r3) {
+        typedef mnt6_g2<fixnum> mnt6g2;
+        typedef modnum_monty_cios<fixnum> modnum;
+        __shared__ uint32_t modulus_data[WARP_DATA_WIDTH];
+        if (threadIdx.x < WARP_DATA_WIDTH) {
+            modulus_data[threadIdx.x] = *((uint32_t *)mnt6_modulus_d + threadIdx.x);
+        }
+
+        __syncthreads();
+
+        modnum m(*((fixnum *)modulus_data + threadIdx.x % 32));
+        mnt6g2::fp3_multi(m, x1, x2, x3, y1, y2, y3, r1, r2, r3);
+  }
+};
+
+template< typename fixnum >
 struct mnt6g1_pq_plus {
     __device__ void operator()(fixnum x1, fixnum y1, fixnum z1, fixnum x2, fixnum y2, fixnum z2, fixnum &x3, fixnum &y3, fixnum &z3) {
         typedef mnt6_g1<fixnum> mnt6g1;
@@ -1556,6 +1573,47 @@ int mnt4_g2_mul(int nelts, uint8_t *x1, uint8_t *x2, uint8_t *y1, uint8_t *y2, u
         delete dy2;
         delete dr1;
         delete dr2;
+    }
+
+    return 0;
+}
+
+int mnt6_g2_mul(int nelts, uint8_t *x1, uint8_t *x2, uint8_t *x3, uint8_t *y1, uint8_t *y2, uint8_t *y3, uint8_t *o1, uint8_t *o2, uint8_t *o3) {
+    typedef warp_fixnum<96, u32_fixnum> fixnum;
+    typedef fixnum_array<fixnum> fixnum_array;
+    int step = nelts;
+    int size = nelts;
+    int DATA_SIZE = 96;
+    int fn_bytes = DATA_SIZE;
+    int step_bytes = fn_bytes * step;
+    fixnum_array *dx1, *dx2, *dx3, *dy1, *dy2, *dy3, *dr1, *dr2, *dr3;
+
+    for (int i = 0; i < nelts; i+=step) {
+        dx1 = fixnum_array::create(x1, step_bytes, fn_bytes);
+        dx2 = fixnum_array::create(x2, step_bytes, fn_bytes);
+        dx3 = fixnum_array::create(x3, step_bytes, fn_bytes);
+        dy1 = fixnum_array::create(y1, step_bytes, fn_bytes);
+        dy2 = fixnum_array::create(y2, step_bytes, fn_bytes);
+        dy3 = fixnum_array::create(y3, step_bytes, fn_bytes);
+        dr1 = fixnum_array::create(step);
+        dr2 = fixnum_array::create(step);
+        dr3 = fixnum_array::create(step);
+        fixnum_array::template map<mnt6g2_multi>(dx1, dx2, dx3, dy1, dy2, dy3, dr1, dr2, dr3);
+
+        int size = nelts;
+        dr1->retrieve_all(o1, step_bytes, &size);
+        dr2->retrieve_all(o2, step_bytes, &size);
+        dr3->retrieve_all(o3, step_bytes, &size);
+
+        delete dx1;
+        delete dx2;
+        delete dx3;
+        delete dy1;
+        delete dy2;
+        delete dy3;
+        delete dr1;
+        delete dr2;
+        delete dr3;
     }
 
     return 0;
