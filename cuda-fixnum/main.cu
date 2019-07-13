@@ -1808,6 +1808,136 @@ int mnt4_g2_sigma(int nelts, uint8_t *x10, uint8_t *x11, uint8_t *y10, uint8_t *
     return 0;
 }
 
-int mnt6_g2_sigma(int n, uint8_t *x10, uint8_t *x11, uint8_t *x12, uint8_t *y10, uint8_t *y11, uint8_t *y12, uint8_t *z10, uint8_t *z11, uint8_t *z12, uint8_t *outx, uint8_t *outy, uint8_t *outz) {
+int mnt6_g2_sigma(int nelts, uint8_t *x10, uint8_t *x11, uint8_t *x12, uint8_t *y10, uint8_t *y11, uint8_t *y12, uint8_t *z10, uint8_t *z11, uint8_t *z12, uint8_t *x3, uint8_t *y3, uint8_t *z3) {
+    typedef warp_fixnum<96, u32_fixnum> fixnum;
+    typedef fixnum_array<fixnum> fixnum_array;
+    
+    size_t fn_bytes = 96;
+    if (nelts == 1) {
+        memcpy(x3, x10, fn_bytes);
+        memcpy(y3, y10, fn_bytes);
+        memcpy(z3, z10, fn_bytes);
+        memcpy(x3 + fn_bytes, x11, fn_bytes);
+        memcpy(y3 + fn_bytes, y11, fn_bytes);
+        memcpy(z3 + fn_bytes, z11, fn_bytes);
+        memcpy(x3 + 2 * fn_bytes, x12, fn_bytes);
+        memcpy(y3 + 2 * fn_bytes, y12, fn_bytes);
+        memcpy(z3 + 2 * fn_bytes, z12, fn_bytes);
+        return 0;
+    }
+    size_t step_bytes = MNT_SIZE * nelts;
+    int start = nelts%2;
+    int rnelts = nelts - start;
+    uint8_t *rx0, *rx1, *rx2, *ry0, *ry1, *ry2, *rz0, *rz1, *rz2;
+    uint8_t *x10bytes = x10;
+    uint8_t *x11bytes = x11;
+    uint8_t *x12bytes = x12;
+    uint8_t *y10bytes = y10;
+    uint8_t *y11bytes = y11;
+    uint8_t *y12bytes = y12;
+    uint8_t *z10bytes = z10;
+    uint8_t *z11bytes = z11;
+    uint8_t *z12bytes = z12;
+    rx0 = new uint8_t[MNT_SIZE*rnelts/2];
+    rx1 = new uint8_t[MNT_SIZE*rnelts/2];
+    rx2 = new uint8_t[MNT_SIZE*rnelts/2];
+    ry0 = new uint8_t[MNT_SIZE*rnelts/2];
+    ry1 = new uint8_t[MNT_SIZE*rnelts/2];
+    ry2 = new uint8_t[MNT_SIZE*rnelts/2];
+    rz0 = new uint8_t[MNT_SIZE*rnelts/2];
+    rz1 = new uint8_t[MNT_SIZE*rnelts/2];
+    rz2 = new uint8_t[MNT_SIZE*rnelts/2];
+    while(rnelts > 1) {
+        do_sigma(rnelts, x10bytes + start*MNT_SIZE, x11bytes + start*MNT_SIZE, x12bytes + start*MNT_SIZE, y10bytes + start*MNT_SIZE, y11bytes + start*MNT_SIZE, y12bytes + start*MNT_SIZE, z10bytes + start*MNT_SIZE, z11bytes + start*MNT_SIZE, z12bytes + start*MNT_SIZE, rx0, rx1, rx2, ry0, ry1, ry2, rz0, rz1, rz2);
+        rnelts = rnelts >> 1;
+        memcpy(x10bytes + start*MNT_SIZE, rx0, rnelts*MNT_SIZE);
+        memcpy(x11bytes + start*MNT_SIZE, rx1, rnelts*MNT_SIZE);
+        memcpy(x12bytes + start*MNT_SIZE, rx2, rnelts*MNT_SIZE);
+        memcpy(y10bytes + start*MNT_SIZE, ry0, rnelts*MNT_SIZE);
+        memcpy(y11bytes + start*MNT_SIZE, ry1, rnelts*MNT_SIZE);
+        memcpy(y12bytes + start*MNT_SIZE, ry2, rnelts*MNT_SIZE);
+        memcpy(z10bytes + start*MNT_SIZE, rz0, rnelts*MNT_SIZE);
+        memcpy(z11bytes + start*MNT_SIZE, rz1, rnelts*MNT_SIZE);
+        memcpy(z12bytes + start*MNT_SIZE, rz2, rnelts*MNT_SIZE);
+        if (rnelts > 1 && rnelts%2) {
+            if (start == 0) {
+                start = 1;
+                rnelts -= 1;
+            } else {
+                start = 0;
+                rnelts += 1;
+            }
+        }
+    }
+    delete rx0;
+    delete ry0;
+    delete rz0;
+    delete rx1;
+    delete ry1;
+    delete rz1;
+    delete rx2;
+    delete ry2;
+    delete rz2;
+    if (start == 1) {
+        // add the first element
+        fixnum_array *x20in, *x21in, *x22in, *y20in, *y21in, *y22in, *z20in, *z21in, *z22in;
+        fixnum_array *rx30, *rx31, *rx32, *ry30, *ry31, *ry32, *rz30, *rz31, *rz32;
+        x20in = fixnum_array::create(x10bytes, fn_bytes, fn_bytes);
+        x21in = fixnum_array::create(x11bytes, fn_bytes, fn_bytes);
+        x22in = fixnum_array::create(x12bytes, fn_bytes, fn_bytes);
+        y20in = fixnum_array::create(y10bytes, fn_bytes, fn_bytes);
+        y21in = fixnum_array::create(y11bytes, fn_bytes, fn_bytes);
+        y22in = fixnum_array::create(y12bytes, fn_bytes, fn_bytes);
+        z20in = fixnum_array::create(z10bytes, fn_bytes, fn_bytes);
+        z21in = fixnum_array::create(z11bytes, fn_bytes, fn_bytes);
+        z22in = fixnum_array::create(z12bytes, fn_bytes, fn_bytes);
+        rx30 = fixnum_array::create(x10bytes + fn_bytes, fn_bytes, fn_bytes);
+        rx31 = fixnum_array::create(x11bytes + fn_bytes, fn_bytes, fn_bytes);
+        rx32 = fixnum_array::create(x12bytes + fn_bytes, fn_bytes, fn_bytes);
+        ry30 = fixnum_array::create(y10bytes + fn_bytes, fn_bytes, fn_bytes);
+        ry31 = fixnum_array::create(y11bytes + fn_bytes, fn_bytes, fn_bytes);
+        ry32 = fixnum_array::create(y12bytes + fn_bytes, fn_bytes, fn_bytes);
+        rz30 = fixnum_array::create(z10bytes + fn_bytes, fn_bytes, fn_bytes);
+        rz31 = fixnum_array::create(z11bytes + fn_bytes, fn_bytes, fn_bytes);
+        rz32 = fixnum_array::create(z12bytes + fn_bytes, fn_bytes, fn_bytes);
+        fixnum_array::template map<mnt6g2_pq_plus>(rx30, rx31, rx32, ry30, ry31, ry32, rz30, rz31, rz32, x20in, x21in, x22in, y20in, y21in, y22in, z20in, z21in, z22in, rx30, rx31, rx32, ry30, ry31, ry32, rz30, rz31, rz32);
+        memcpy(x3, rx30, fn_bytes);
+        memcpy(y3, ry30, fn_bytes);
+        memcpy(z3, rz30, fn_bytes);
+        memcpy(x3 + fn_bytes, rx31, fn_bytes);
+        memcpy(y3 + fn_bytes, ry31, fn_bytes);
+        memcpy(z3 + fn_bytes, rz31, fn_bytes);
+        memcpy(x3 + 2 * fn_bytes, rx32, fn_bytes);
+        memcpy(y3 + 2 * fn_bytes, ry32, fn_bytes);
+        memcpy(z3 + 2 * fn_bytes, rz32, fn_bytes);
+        delete x20in;
+        delete x21in;
+        delete x22in;
+        delete y20in;
+        delete y21in;
+        delete y22in;
+        delete z20in;
+        delete z21in;
+        delete z22in;
+        delete rx30;
+        delete rx31;
+        delete rx32;
+        delete ry30;
+        delete ry31;
+        delete ry32;
+        delete rz30;
+        delete rz31;
+        delete rz32;
+    } else {
+        memcpy(x3, x10bytes, fn_bytes);
+        memcpy(y3, y10bytes, fn_bytes);
+        memcpy(z3, z10bytes, fn_bytes);
+        memcpy(x3 + fn_bytes, x11bytes, fn_bytes);
+        memcpy(y3 + fn_bytes, y11bytes, fn_bytes);
+        memcpy(z3 + fn_bytes, z11bytes, fn_bytes);
+        memcpy(x3 + 2 * fn_bytes, x12bytes, fn_bytes);
+        memcpy(y3 + 2 * fn_bytes, y12bytes, fn_bytes);
+        memcpy(z3 + 2 * fn_bytes, z12bytes, fn_bytes);
+    }
     return 0;
 }

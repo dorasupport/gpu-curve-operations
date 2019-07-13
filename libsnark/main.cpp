@@ -158,7 +158,6 @@ int main(int argc, char *argv[])
       size_t elts_read = fread((void *) &n, sizeof(size_t), 1, inputs);
 
       if (elts_read == 0) { break; }
-      printf("n %d\n", n);
       size_t esize = 96;
       size_t data_size = n * esize;
 
@@ -246,8 +245,24 @@ int main(int argc, char *argv[])
           memcpy(z1buf + offset, Fqe<mnt6753_pp>::one().c0.mont_repr.data, esize);
           memcpy(z2buf + offset, Fqe<mnt6753_pp>::one().c1.mont_repr.data, esize);
           memcpy(z3buf + offset, Fqe<mnt6753_pp>::one().c2.mont_repr.data, esize);
-          offset += 3 * esize;
+          offset += esize;
       }
+      mnt6_g2_sigma(n, x1buf, x2buf, x3buf, y1buf, y2buf, y3buf, z1buf, z2buf, z3buf, outxbuf, outybuf, outzbuf);
+      bigint<mnt6753_q_limbs> g62x1, g62x2, g62x3, g62y1, g62y2, g62y3, g62z1, g62z2, g62z3;
+      setBigData(&g62x1, outxbuf, esize);
+      setBigData(&g62y1, outybuf, esize);
+      setBigData(&g62z1, outzbuf, esize);
+      setBigData(&g62x2, outxbuf + esize, esize);
+      setBigData(&g62y2, outybuf + esize, esize);
+      setBigData(&g62z2, outzbuf + esize, esize);
+      setBigData(&g62x3, outxbuf + 2 * esize, esize);
+      setBigData(&g62y3, outybuf + 2 * esize, esize);
+      setBigData(&g62z3, outzbuf + 2 * esize, esize);
+      mnt6753_Fq3 g62x = mnt6753_Fq3(g62x1, g62x2, g62x3);
+      mnt6753_Fq3 g62y = mnt6753_Fq3(g62y1, g62y2, g62y3);
+      mnt6753_Fq3 g62z = mnt6753_Fq3(g62z1, g62z2, g62z3);
+      G2<mnt6753_pp> g_62 = G2<mnt6753_pp>(g62x, g62y, g62z);
+      write_mnt6_g2(outputs, g_62);
       
       delete x1buf;
       delete x2buf;
